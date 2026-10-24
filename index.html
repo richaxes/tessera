@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="hu">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -422,26 +422,26 @@ const Engine = (() => {
 
   function applyMove(state, move, rng = Math.random) {
     const s = clone(state);
-    if (s.status !== 'playing') throw new Error('Game is not in progress');
+    if (s.status !== 'playing') throw new Error('A játék nincs folyamatban');
     const p = s.players[s.turn];
     const { src, color, line } = move;
     let taken;
     let tookToken = false;
     if (src === 'c') {
       taken = s.center.filter((c) => c === color);
-      if (!taken.length) throw new Error('That colour is not in the centre');
+      if (!taken.length) throw new Error('Nincs ilyen mintájú csempe középen');
       s.center = s.center.filter((c) => c !== color);
       if (s.centerToken) { s.centerToken = false; tookToken = true; s.firstNext = s.turn; }
     } else {
       const f = s.factories[src];
-      if (!f) throw new Error('No such display');
+      if (!f) throw new Error('Nincs ilyen kínálótálca');
       taken = f.filter((c) => c === color);
-      if (!taken.length) throw new Error('That colour is not on this display');
+      if (!taken.length) throw new Error('Nincs ilyen mintájú csempe ezen a kínálótálcán');
       s.center.push(...f.filter((c) => c !== color));
       s.center.sort((a, b) => a - b);
       s.factories[src] = [];
     }
-    if (!canPlace(p, line, color)) throw new Error('That tile cannot go on this row');
+    if (!canPlace(p, line, color)) throw new Error('Ez a csempe nem kerülhet ebbe a sorba');
     if (tookToken) addToFloor(s, p, [-1]);
     let toFloor = taken.length;
     if (line >= 0) {
@@ -500,13 +500,13 @@ const Engine = (() => {
 </script>
 <script>
 (() => {
-const NAMES = ['Jackalope', 'Red panda', 'Rose', 'Prince', 'Cicavirág'];
-const NAMES_PL = ['Jackalope', 'Red panda', 'Rose', 'Prince', 'Cicavirág'];
+const NAMES = ['Nyúltülök', 'Vöröspandi', 'Rózsa', 'Kisherceg', 'Cicavirág'];
+const NAMES_PL = ['Nyúltülök', 'Vöröspandi', 'Rózsa', 'Kisherceg', 'Cicavirág'];
 const app = document.getElementById('app'), overlay = document.getElementById('overlay');
 const TAB = Math.random().toString(36).slice(2, 10);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const tileSvg = (c, cls = '') => c < 0 ? `<span class="tok" aria-label="First player marker">1</span>` : `<svg class="tile ${cls}" viewBox="0 0 352 423" role="img" aria-label="${NAMES[c]}"><use href="#tile${c}"/></svg>`;
+const tileSvg = (c, cls = '') => c < 0 ? `<span class="tok" aria-label="Kezdőjátékos-jelölő">1</span>` : `<svg class="tile ${cls}" viewBox="0 0 352 423" role="img" aria-label="${NAMES[c]}"><use href="#tile${c}"/></svg>`;
 const store = { get(k, d) { try { const v = localStorage.getItem('tessera.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem('tessera.' + k, JSON.stringify(v)); } catch {} } };
 
 // ---------- app state ----------
@@ -533,9 +533,9 @@ function toast(msg) {
 // ---------- names ----------
 function seatName(i) {
   const s = G?.seats?.[i];
-  if (!s) return `Player ${i + 1}`;
-  if (s.bot) return 'Computer' + (G.seats.filter((x) => x.bot).length > 1 ? ' ' + (G.seats.slice(0, i + 1).filter((x) => x.bot).length) : '');
-  return s.nick || (s.id && names[s.id]) || `Player ${i + 1}`;
+  if (!s) return `Játékos ${i + 1}`;
+  if (s.bot) return 'Gép' + (G.seats.filter((x) => x.bot).length > 1 ? ' ' + (G.seats.slice(0, i + 1).filter((x) => x.bot).length) : '');
+  return s.nick || (s.id && names[s.id]) || `Játékos ${i + 1}`;
 }
 function isMe(i) { return G?.mode === 'online' && G.seats[i] && !G.seats[i].bot && G.seats[i].id === myId; }
 function refreshNames(ids) {
@@ -567,7 +567,7 @@ function focusSeat() {
 
 // ---------- rendering ----------
 function render() {
-  document.title = (G?.mode === 'online' && canAct()) ? '● Your turn · Tessera' : 'Tessera';
+  document.title = (G?.mode === 'online' && canAct()) ? '● Te következel · Tessera' : 'Tessera';
   if (view === 'home') app.innerHTML = homeHTML();
   else app.innerHTML = gameHTML();
   renderOverlays();
@@ -581,45 +581,45 @@ function homeHTML() {
   const mineTables = lobby.filter((d) => (d.playerIds || []).includes(myId));
   const open = lobby.filter((d) => d.status === 'lobby' && !d.private && !(d.playerIds || []).includes(myId) && d.seats.length < d.size);
   const tcard = (d) => {
-    const ppl = d.seats.map((s) => s.bot ? 'Computer' : (s.nick || names[s.id] || 'Player')).join(' · ');
-    const st = d.status === 'lobby' ? `Waiting · ${d.seats.length}/${d.size}` : d.status === 'over' ? 'Finished' : (d.state && d.seats[d.state.turn]?.id === myId && !d.seats[d.state.turn]?.bot ? '<span class="chip go">Your turn</span>' : `Round ${d.state?.round ?? 1}`);
+    const ppl = d.seats.map((s) => s.bot ? 'Gép' : (s.nick || names[s.id] || 'Játékos')).join(' · ');
+    const st = d.status === 'lobby' ? `Várakozás · ${d.seats.length}/${d.size}` : d.status === 'over' ? 'Befejeződött' : (d.state && d.seats[d.state.turn]?.id === myId && !d.seats[d.state.turn]?.bot ? '<span class="chip go">Te következel</span>' : `${d.state?.round ?? 1}. forduló`);
     const joined = (d.playerIds || []).includes(myId);
-    return `<div class="tablecard"><span class="chip code">${esc(d.code)}</span><div class="who"><b>${esc(ppl)}</b><div class="muted" style="font-size:12.5px">${st}</div></div><button class="btn sm ${joined ? 'primary' : ''}" data-act="${joined ? 'open' : 'join'}" data-code="${esc(d.code)}">${joined ? 'Open' : 'Join'}</button></div>`;
+    return `<div class="tablecard"><span class="chip code">${esc(d.code)}</span><div class="who"><b>${esc(ppl)}</b><div class="muted" style="font-size:12.5px">${st}</div></div><button class="btn sm ${joined ? 'primary' : ''}" data-act="${joined ? 'open' : 'join'}" data-code="${esc(d.code)}">${joined ? 'Megnyitás' : 'Csatlakozás'}</button></div>`;
   };
   let online;
-  if (!onlineChecked) online = `<div class="empty">Connecting…</div>`;
-  else if (!onlineReady) online = `<div class="empty">${esc(onlineError || 'Online play isn’t connected yet.')} You can still play on this device.</div>`;
+  if (!onlineChecked) online = `<div class="empty">Kapcsolódás…</div>`;
+  else if (!onlineReady) online = `<div class="empty">${esc(onlineError || 'Az online játék még nem kapcsolódott.')} Ezen az eszközön így is játszhatsz.</div>`;
   else online = `
-    <div class="row"><span class="label">Players</span>${seg('osize', [2, 3, 4], onlineSize)}
-      <label class="row muted" style="gap:6px;font-size:14px"><input type="checkbox" id="opriv" ${onlinePrivate ? 'checked' : ''}> Invite only</label></div>
-    <div class="row"><button class="btn primary" data-act="create">New table</button><span class="muted" style="font-size:13px">You'll get a code to send to the people you want to play with.</span></div>
-    <div class="row"><input type="text" id="joincode" placeholder="Table code, e.g. KQ4TR" maxlength="6" autocomplete="off" style="text-transform:uppercase"><button class="btn" data-act="joincode">Join</button></div>
-    <div class="list"><span class="label">Your tables</span>${mineTables.length ? mineTables.map(tcard).join('') : '<div class="empty">No tables yet. Start one and share its code.</div>'}</div>
-    ${open.length ? `<div class="list"><span class="label">Open tables</span>${open.map(tcard).join('')}</div>` : ''}`;
+    <div class="row"><span class="label">Játékosok</span>${seg('osize', [2, 3, 4], onlineSize)}
+      <label class="row muted" style="gap:6px;font-size:14px"><input type="checkbox" id="opriv" ${onlinePrivate ? 'checked' : ''}> Csak meghívással</label></div>
+    <div class="row"><button class="btn primary" data-act="create">Új asztal</button><span class="muted" style="font-size:13px">Kapsz egy kódot, amellyel meghívhatod a játékostársaidat.</span></div>
+    <div class="row"><input type="text" id="joincode" placeholder="Asztalkód, pl. KQ4TR" maxlength="6" autocomplete="off" style="text-transform:uppercase"><button class="btn" data-act="joincode">Csatlakozás</button></div>
+    <div class="list"><span class="label">Asztalaid</span>${mineTables.length ? mineTables.map(tcard).join('') : '<div class="empty">Még nincs asztalod. Hozz létre egyet, és oszd meg a kódját!</div>'}</div>
+    ${open.length ? `<div class="list"><span class="label">Nyitott asztalok</span>${open.map(tcard).join('')}</div>` : ''}`;
   const L = localSetup;
-  const seatsHTML = Array.from({ length: L.n }, (_, i) => `<div class="seatrow"><input type="text" id="lseat${i}" placeholder="Player ${i + 1}" value="${esc(L.seats[i].nick)}" maxlength="18" data-seat="${i}">${seg('lbot' + i, ['Person', 'Computer'], L.seats[i].bot ? 'Computer' : 'Person')}</div>`).join('');
+  const seatsHTML = Array.from({ length: L.n }, (_, i) => `<div class="seatrow"><input type="text" id="lseat${i}" placeholder="Játékos ${i + 1}" value="${esc(L.seats[i].nick)}" maxlength="18" data-seat="${i}">${seg('lbot' + i, ['Ember', 'Gép'], L.seats[i].bot ? 'Gép' : 'Ember')}</div>`).join('');
   return header() + `
   <section class="hero">
-    <h1>Draft tiles,<br>build your wall.</h1>
-    <p>A tile-drafting game for two to four players, with a hand-made set of five glazed tiles. Play a friend online one-on-one, or pass one device around the table.</p>
+    <h1>Gyűjts csempéket,<br>építsd fel a falad!</h1>
+    <p>Csempegyűjtő társasjáték 2–4 játékosnak, öt mesés csempemintával. Játsszatok online, vagy adjátok körbe az eszközt az asztalnál!</p>
     <div class="hero-tiles">${[0, 1, 2, 3, 4].map((c) => `<figure>${tileSvg(c)}<figcaption>${NAMES[c]}</figcaption></figure>`).join('')}</div>
   </section>
   <div class="cols">
-    <section class="panel"><h2>Play online</h2>
-      <div class="row"><span class="label">Your name</span><input type="text" id="nick" value="${esc(nick)}" placeholder="Shown to other players" maxlength="18"></div>
+    <section class="panel"><h2>Online játék</h2>
+      <div class="row"><span class="label">Neved</span><input type="text" id="nick" value="${esc(nick)}" placeholder="Ezt látja a többi játékos" maxlength="18"></div>
       ${online}
     </section>
-    <section class="panel"><h2>Play on this device</h2>
-      <div class="row"><span class="label">Players</span>${seg('lsize', [2, 3, 4], L.n)}</div>
+    <section class="panel"><h2>Játék ezen az eszközön</h2>
+      <div class="row"><span class="label">Játékosok</span>${seg('lsize', [2, 3, 4], L.n)}</div>
       <div class="list">${seatsHTML}</div>
-      <div class="row"><button class="btn primary" data-act="local">Start game</button></div>
+      <div class="row"><button class="btn primary" data-act="local">Játék indítása</button></div>
     </section>
   </div>
-  <details><summary>How to play</summary><ol class="rules">
-    <li>On your turn, take <b>all tiles of one design</b> from a display (the rest slide to the centre) or all of one design from the centre. The first player to take from the centre also takes the <b>1</b> marker, which goes on their floor and makes them start next round.</li>
-    <li>Put the tiles on one of your five rows. A row holds one design only, and not one you already have on that row of your wall. Extra tiles fall to the floor.</li>
-    <li>When the market is empty, each full row moves one tile across to the wall. It scores 1, or 1 for every tile in the connected line it joins, across and down. Floor tiles cost −1, −1, −2, −2, −2, −3, −3.</li>
-    <li>The game ends after the round in which someone completes a horizontal wall row. Bonuses: +2 per full row, +7 per full column, +10 for all five of one design. Most points wins; ties go to most full rows.</li>
+  <details><summary>Játékszabályok</summary><ol class="rules">
+    <li>Amikor te következel, vedd el <b>egy minta összes csempéjét</b> egy kínálótálcáról (a többi középre kerül), vagy a középső mezőről. Aki először vesz el középről, az az <b>1</b>-es jelölőt is megkapja: ez a padlósorába kerül, és ő kezdi a következő fordulót.</li>
+    <li>Tedd a csempéket az öt mintasorod egyikébe! Egy sorba csak azonos mintájú csempék kerülhetnek, és csak olyan mintából, amely még nincs a falad megfelelő sorában. A felesleges csempék a padlósorba kerülnek.</li>
+    <li>Amikor elfogynak a csempék a kínálótálcákról és középről, minden teljes mintasorból egy csempe átkerül a falra. Az önálló csempe 1 pontot ér. Ha más csempékhez kapcsolódik, az összefüggő vízszintes és függőleges sor minden csempéje 1 pontot ér; az új csempe mindkét irányban beleszámít. A padlósor mezői rendre −1, −1, −2, −2, −2, −3, −3 pontot érnek.</li>
+    <li>A játék annak a fordulónak a végén ér véget, amelyben valaki kitölt egy vízszintes sort a falán. Bónuszok: +2 pont minden teljes sorért, +7 pont minden teljes oszlopért, +10 pont egy minta mind az öt csempéjéért. A legtöbb pontot gyűjtő játékos nyer. Pontegyenlőségnél a több teljes sor dönt.</li>
   </ol></details>`;
 }
 
@@ -629,12 +629,12 @@ function seg(id, opts, cur) {
 
 function gameHTML() {
   const top = (extra) => header(extra);
-  const back = `<button class="btn sm" data-act="home">← ${G.mode === 'online' ? 'Tables' : 'Menu'}</button>`;
-  if (G.mode === 'online' && (!G.doc)) return top(back) + `<div class="empty">Loading table…</div>`;
+  const back = `<button class="btn sm" data-act="home">← ${G.mode === 'online' ? 'Asztalok' : 'Menü'}</button>`;
+  if (G.mode === 'online' && (!G.doc)) return top(back) + `<div class="empty">Asztal betöltése…</div>`;
   if (G.mode === 'online' && G.doc.status === 'lobby') return top(back) + lobbyHTML();
   const s = G.state;
-  const codeChip = G.mode === 'online' ? `<button class="chip code" data-act="copy" title="Copy table code">${esc(G.code)}</button>` : '';
-  const head = top(`<span class="chip num">Round ${s.round}</span>${codeChip}${back}`);
+  const codeChip = G.mode === 'online' ? `<button class="chip code" data-act="copy" title="Asztalkód másolása">${esc(G.code)}</button>` : '';
+  const head = top(`<span class="chip num">${s.round}. forduló</span>${codeChip}${back}`);
   const f = focusSeat();
   const others = s.players.map((_, i) => i).filter((i) => i !== f);
   return head + `
@@ -649,20 +649,20 @@ function gameHTML() {
 
 function describeMove(m) {
   if (!m) return '';
-  const from = m.src === 'c' ? 'the centre' : `display ${m.src + 1}`;
-  const to = m.line < 0 ? 'the floor' : `row ${m.line + 1}`;
-  return `${esc(seatName(m.player))} took ${m.count} ${NAMES[m.color]} from ${from} → ${to}${m.toFloor && m.line >= 0 ? ` (${m.toFloor} to floor)` : ''}${m.tookToken ? ', plus the 1 marker' : ''}.`;
+  const from = m.src === 'c' ? 'középről' : `a(z) ${m.src + 1}. kínálótálcáról`;
+  const to = m.line < 0 ? 'padlósor' : `${m.line + 1}. mintasor`;
+  return `${esc(seatName(m.player))} elvett ${m.count} csempét (${NAMES[m.color]}) ${from} → ${to}${m.toFloor && m.line >= 0 ? ` (${m.toFloor} a padlósorba)` : ''}${m.tookToken ? ', és az 1-es jelölőt is megkapta' : ''}.`;
 }
 
 function statusHTML() {
   const s = G.state;
-  if (s.status === 'over') return `<div class="status"><b>Game over.</b><span class="grow"></span></div>`;
+  if (s.status === 'over') return `<div class="status"><b>Vége a játéknak.</b><span class="grow"></span></div>`;
   const t = s.turn, me = canAct();
   let msg;
-  if (me && sel) msg = `<b>Place ${countSel()} ${NAMES[sel.color]}:</b> tap a highlighted row, or the floor. <button class="btn sm" data-act="cancel">Cancel</button>`;
-  else if (me) msg = `<b>${G.mode === 'local' ? esc(seatName(t)) + ', your' : 'Your'} turn.</b> Tap a tile in a display or the centre.`;
-  else if (G.seats[t]?.bot) msg = `${esc(seatName(t))} is thinking…`;
-  else msg = `Waiting for <b>${esc(seatName(t))}</b>.`;
+  if (me && sel) msg = `<b>Helyezz el ${countSel()} csempét (${NAMES[sel.color]})!</b> Válassz egy kiemelt sort vagy a padlósort. <button class="btn sm" data-act="cancel">Mégse</button>`;
+  else if (me) msg = `<b>${G.mode === 'local' ? esc(seatName(t)) + ', te következel!' : 'Te következel!'}</b> Válassz csempét egy kínálótálcáról vagy középről.`;
+  else if (G.seats[t]?.bot) msg = `${esc(seatName(t))} gondolkodik…`;
+  else msg = `Várakozás: <b>${esc(seatName(t))}</b>.`;
   const last = s.lastMove ? `<span class="muted" style="font-size:13px;width:100%">${describeMove(s.lastMove)}</span>` : '';
   return `<div class="status ${me ? 'mine-turn' : ''}"><span class="grow">${msg}</span>${last}</div>`;
 }
@@ -678,12 +678,12 @@ function marketHTML() {
   const lm = s.lastMove;
   const btn = (src, c) => {
     const isSel = sel && sel.src === src && sel.color === c;
-    return `<button class="tilebtn ${isSel ? 'sel' : ''}" data-act="pick" data-src="${src}" data-color="${c}" ${act ? '' : 'disabled'} aria-label="Take ${NAMES[c]} from ${src === 'c' ? 'centre' : 'display ' + (src + 1)}">${tileSvg(c)}</button>`;
+    return `<button class="tilebtn ${isSel ? 'sel' : ''}" data-act="pick" data-src="${src}" data-color="${c}" ${act ? '' : 'disabled'} aria-label="${NAMES[c]} csempék elvétele: ${src === 'c' ? 'közép' : (src + 1) + '. kínálótálca'}">${tileSvg(c)}</button>`;
   };
   const facs = s.factories.map((f, i) => `<div class="fac ${lm && lm.src === i ? 'recent' : ''}"><span class="n">${i + 1}</span>${f.length ? `<div class="g">${f.map((c) => btn(i, c)).join('')}</div>` : ''}</div>`).join('');
   const groups = [0, 1, 2, 3, 4].map((c) => { const n = s.center.filter((x) => x === c).length; return n ? `<div class="grp">${Array(n).fill(0).map(() => btn('c', c)).join('')}</div>` : ''; }).join('');
-  return `<section class="market" aria-label="Market"><div class="facs">${facs}</div>
-    <div class="centre"><span class="lab">Centre</span>${s.centerToken ? tileSvg(-1) : ''}${groups}${!s.centerToken && !s.center.length ? '<span class="muted" style="font-size:13px">Empty</span>' : ''}</div></section>`;
+  return `<section class="market" aria-label="Csempekínálat"><div class="facs">${facs}</div>
+    <div class="centre"><span class="lab">Közép</span>${s.centerToken ? tileSvg(-1) : ''}${groups}${!s.centerToken && !s.center.length ? '<span class="muted" style="font-size:13px">Üres</span>' : ''}</div></section>`;
 }
 
 function boardHTML(pi, compact) {
@@ -696,7 +696,7 @@ function boardHTML(pi, compact) {
       const filled = k >= r + 1 - L.n;
       return filled ? tileSvg(L.color) : `<span class="slot"></span>`;
     }).join('');
-    return `<button class="line ${ok ? 'ok' : ''}" ${ok ? `data-act="place" data-line="${r}"` : 'disabled tabindex="-1"'} aria-label="Row ${r + 1}">${slots}</button>`;
+    return `<button class="line ${ok ? 'ok' : ''}" ${ok ? `data-act="place" data-line="${r}"` : 'disabled tabindex="-1"'} aria-label="${r + 1}. mintasor">${slots}</button>`;
   }).join('');
   const wall = p.wall.map((row, r) => row.map((on, c) => {
     const color = Engine.wallColor(r, c);
@@ -705,10 +705,10 @@ function boardHTML(pi, compact) {
   }).join('')).join('');
   const fl = Engine.FLOOR.map((pen, k) => `<span class="fs">${k < p.floor.length ? tileSvg(p.floor[k]) : '<span class="slot"></span>'}<i>−${pen}</i></span>`).join('');
   const turn = s.status === 'playing' && s.turn === pi;
-  return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" aria-label="${esc(seatName(pi))}'s board">
-    <div class="bhead">${turn ? '<span class="dot" title="Their turn"></span>' : ''}<span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(you)</span>' : ''}</span><span class="sc num">${p.score}</span></div>
+  return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" aria-label="${esc(seatName(pi))} táblája">
+    <div class="bhead">${turn ? '<span class="dot" title="Ő következik"></span>' : ''}<span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span><span class="sc num">${p.score}</span></div>
     <div class="bgrid"><div class="lines">${lines}</div><div class="wall">${wall}</div></div>
-    <button class="floor ${active ? 'ok' : ''}" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Floor">${fl}</button>
+    <button class="floor ${active ? 'ok' : ''}" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Padlósor">${fl}</button>
   </section>`;
 }
 
@@ -716,34 +716,34 @@ function finalHTML() {
   const s = G.state;
   const order = s.players.map((_, i) => i).sort((a, b) => s.players[b].score - s.players[a].score);
   const w = s.winners.map((i) => seatName(i));
-  const title = w.length > 1 ? `Shared win: ${w.map(esc).join(' & ')}` : `${esc(w[0])} wins`;
+  const title = w.length > 1 ? `Közös győzelem: ${w.map(esc).join(' és ')}` : `${esc(w[0])} nyert!`;
   const rows = order.map((i) => { const b = s.final[i]; return `<tr class="${s.winners.includes(i) ? 'win' : ''}"><td>${esc(seatName(i))}</td><td>${b.rows}</td><td>${b.cols}</td><td>${b.colors}</td><td>+${b.points}</td><td><b>${s.players[i].score}</b></td></tr>`; }).join('');
   const canRematch = G.mode === 'local' || (G.doc && G.doc.hostId === myId);
   return `<section class="final"><h2>${title}</h2>
-    <div style="overflow-x:auto"><table><thead><tr><th>Player</th><th>Rows</th><th>Cols</th><th>Sets</th><th>Bonus</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="row">${canRematch ? '<button class="btn primary" data-act="rematch">Rematch</button>' : '<span class="muted">The host can start a rematch.</span>'}<button class="btn" data-act="home">${G.mode === 'online' ? 'Back to tables' : 'Menu'}</button>
-    ${G.mode === 'online' && G.doc?.hostId === myId ? `<button class="btn danger" data-act="remove">${removeArmed ? 'Tap again to remove' : 'Remove table'}</button>` : ''}</div></section>`;
+    <div style="overflow-x:auto"><table><thead><tr><th>Játékos</th><th>Sorok</th><th>Oszlopok</th><th>Minták</th><th>Bónusz</th><th>Összesen</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="row">${canRematch ? '<button class="btn primary" data-act="rematch">Újrajátszás</button>' : '<span class="muted">A házigazda indíthat új játékot.</span>'}<button class="btn" data-act="home">${G.mode === 'online' ? 'Vissza az asztalokhoz' : 'Menü'}</button>
+    ${G.mode === 'online' && G.doc?.hostId === myId ? `<button class="btn danger" data-act="remove">${removeArmed ? 'Kattints újra a törléshez' : 'Asztal törlése'}</button>` : ''}</div></section>`;
 }
 
 function lobbyHTML() {
   const d = G.doc, host = d.hostId === myId, joined = (d.playerIds || []).includes(myId);
   const seats = Array.from({ length: d.size }, (_, i) => {
     const s = d.seats[i];
-    if (!s) return `<div class="seat open"><span class="grow">Open seat</span></div>`;
-    const kick = host && (s.bot || s.id !== myId) ? `<button class="btn sm" data-act="kick" data-seat="${i}">Remove</button>` : '';
-    return `<div class="seat"><span class="grow"><b>${esc(seatName(i))}</b>${s.id === myId && !s.bot ? ' <span class="muted">(you)</span>' : ''}${d.hostId === s.id && !s.bot ? ' <span class="muted">· host</span>' : ''}</span>${kick}</div>`;
+    if (!s) return `<div class="seat open"><span class="grow">Szabad hely</span></div>`;
+    const kick = host && (s.bot || s.id !== myId) ? `<button class="btn sm" data-act="kick" data-seat="${i}">Eltávolítás</button>` : '';
+    return `<div class="seat"><span class="grow"><b>${esc(seatName(i))}</b>${s.id === myId && !s.bot ? ' <span class="muted">(te)</span>' : ''}${d.hostId === s.id && !s.bot ? ' <span class="muted">· házigazda</span>' : ''}</span>${kick}</div>`;
   }).join('');
   const full = d.seats.length >= d.size;
   return `<section class="panel waiting">
-    <span class="label">Table code</span>
-    <div class="row"><span class="bigcode">${esc(d.code)}</span><button class="btn sm" data-act="copy">Copy code</button></div>
-    <p class="muted" style="margin:0;max-width:52ch">Send this code to the ${d.size === 2 ? 'person' : 'people'} you want to play with. They open this page, enter the code under <b>Play online</b>, and take a seat.</p>
+    <span class="label">Asztalkód</span>
+    <div class="row"><span class="bigcode">${esc(d.code)}</span><button class="btn sm" data-act="copy">Kód másolása</button></div>
+    <p class="muted" style="margin:0;max-width:52ch">Küldd el ezt a kódot a játékostársaidnak! Nyissák meg ezt az oldalt, adják meg a kódot az <b>Online játék</b> résznél, és csatlakozzanak az asztalhoz.</p>
     <div class="seats">${seats}</div>
     <div class="row">
-      ${!joined && !full ? '<button class="btn primary" data-act="sit">Take a seat</button>' : ''}
-      ${host ? `<button class="btn primary" data-act="start" ${full ? '' : 'disabled'}>Start game</button>${!full ? '<button class="btn" data-act="addbot">Add computer player</button>' : ''}` : (joined ? '<span class="muted">Waiting for the host to start.</span>' : '')}
-      ${joined && !host ? '<button class="btn" data-act="leave">Leave table</button>' : ''}
-      ${host ? `<button class="btn danger" data-act="remove">${removeArmed ? 'Tap again to remove' : 'Remove table'}</button>` : ''}
+      ${!joined && !full ? '<button class="btn primary" data-act="sit">Csatlakozás</button>' : ''}
+      ${host ? `<button class="btn primary" data-act="start" ${full ? '' : 'disabled'}>Játék indítása</button>${!full ? '<button class="btn" data-act="addbot">Gépi játékos hozzáadása</button>' : ''}` : (joined ? '<span class="muted">Várakozás a házigazdára a játék indításához.</span>' : '')}
+      ${joined && !host ? '<button class="btn" data-act="leave">Asztal elhagyása</button>' : ''}
+      ${host ? `<button class="btn danger" data-act="remove">${removeArmed ? 'Kattints újra a törléshez' : 'Asztal törlése'}</button>` : ''}
     </div></section>`;
 }
 
@@ -751,9 +751,9 @@ function renderOverlays() {
   overlay.querySelector('.banner')?.remove();
   const s = G?.state;
   if (view !== 'game' || !s || !s.lastRound || s.status === 'over' || bannerFor !== s.lastRound.round + ':' + (G.code || 'local')) return;
-  const rows = s.lastRound.summary.map((r, i) => `<tr><td>${esc(seatName(i))}</td><td>${r.placed.length} placed</td><td>${r.penalty ? '−' + r.penalty : '—'}</td><td><b>${r.gain >= 0 ? '+' : ''}${r.gain}</b></td></tr>`).join('');
+  const rows = s.lastRound.summary.map((r, i) => `<tr><td>${esc(seatName(i))}</td><td>${r.placed.length} lerakott csempe</td><td>${r.penalty ? '−' + r.penalty : '—'}</td><td><b>${r.gain >= 0 ? '+' : ''}${r.gain}</b></td></tr>`).join('');
   const b = document.createElement('div'); b.className = 'banner';
-  b.innerHTML = `<div class="card"><div class="row"><b style="flex:1">Round ${s.lastRound.round} scored</b><button class="btn sm" data-act="closebanner">Close</button></div><table><tbody>${rows}</tbody></table></div>`;
+  b.innerHTML = `<div class="card"><div class="row"><b style="flex:1">${s.lastRound.round}. forduló – pontozás</b><button class="btn sm" data-act="closebanner">Bezárás</button></div><table><tbody>${rows}</tbody></table></div>`;
   overlay.appendChild(b);
 }
 
@@ -805,7 +805,7 @@ async function doMove(line) {
       d.state = next; d.status = next.status === 'over' ? 'over' : 'playing';
       return d;
     });
-    if (!ok) { toast('That move could not be saved. The board has been refreshed.'); }
+    if (!ok) { toast('Nem sikerült menteni a lépést. Nyisd meg újra az asztalt a mentett állapot betöltéséhez!'); }
   }
 }
 
@@ -841,10 +841,10 @@ async function commit(mutate, quiet, code = G.code) {
   }
   if (!quiet) {
     const c = (last && last.code) || '';
-    toast(c === 'permission-denied' ? 'The database refused that change. Check the Firestore rules (step 4).'
-      : c === 'unavailable' ? 'Can’t reach the database (unavailable). An ad blocker, antivirus or network filter may be blocking firestore.googleapis.com.'
-      : c === 'failed-precondition' || c === 'not-found' ? 'The database isn’t set up correctly (' + c + '). Check that Firestore was created in Standard edition (step 3).'
-      : 'Couldn’t save the move (' + (c || (last && last.message) || 'unknown') + ').');
+    toast(c === 'permission-denied' ? 'Az adatbázis nem engedélyezte a módosítást. Ellenőrizd a Firestore hozzáférési szabályait!'
+      : c === 'unavailable' ? 'Nem érhető el az adatbázis (unavailable). Egy reklámblokkoló, vírusirtó vagy hálózati szűrő blokkolhatja a firestore.googleapis.com címet.'
+      : c === 'failed-precondition' || c === 'not-found' ? 'Az adatbázis beállítása hibás (' + c + '). Ellenőrizd, hogy a Firestore adatbázist Standard kiadásban hoztad-e létre!'
+      : 'Nem sikerült menteni a lépést (' + (c || (last && last.message) || 'ismeretlen hiba') + ').');
   }
   return false;
 }
@@ -859,7 +859,7 @@ async function createTable() {
     await db.doc('games/' + code).set({ code, status: 'lobby', hostId: myId, size: onlineSize, private: onlinePrivate, seats: [{ id: myId, nick, bot: false }], playerIds: [myId], createdAt: now, updatedAt: now, state: null });
     openTable(code);
   } catch (e) {
-    console.warn(e); toast(e?.code === 'permission-denied' ? 'The server refused to create the table. Check the Firestore rules (step 4).' : 'Couldn’t create the table (' + (e?.code || e?.message || 'unknown') + ').');
+    console.warn(e); toast(e?.code === 'permission-denied' ? 'A szerver nem engedélyezte az asztal létrehozását. Ellenőrizd a Firestore hozzáférési szabályait!' : 'Nem sikerült létrehozni az asztalt (' + (e?.code || e?.message || 'ismeretlen hiba') + ').');
   }
 }
 
@@ -870,13 +870,13 @@ function openTable(code) {
   view = 'game'; render();
   unsubGame = db.doc('games/' + code).onSnapshot((snap) => {
     if (!G || G.code !== code) return;
-    if (!snap.exists) { if (!snap.metadata.fromCache) { toast(`Table ${code} doesn’t exist or was removed.`); goHome(); } return; }
+    if (!snap.exists) { if (!snap.metadata.fromCache) { toast(`A(z) ${code} kódú asztal nem létezik, vagy már törölték.`); goHome(); } return; }
     const d = JSON.parse(JSON.stringify(snap.data()));
     G.doc = d; G.seats = d.seats;
     if (!G.state || !d.state || d.state.seq >= G.state.seq || d.status !== 'playing') G.state = d.state;
     refreshNames(d.seats.map((s) => s.id));
     afterState(); render();
-  }, () => { toast('Lost the connection to this table. Reopen it from Tables.'); });
+  }, () => { toast('Megszakadt a kapcsolat az asztallal. Nyisd meg újra az Asztalok nézetből!'); });
 }
 
 async function sit(code) {
@@ -891,19 +891,19 @@ async function sit(code) {
 
 async function joinByCode(code) {
   code = (code || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{5}$/.test(code)) return toast('Table codes are 5 letters and numbers.');
+  if (!/^[A-Z0-9]{5}$/.test(code)) return toast('Az asztalkód 5 betűből és számból áll.');
   try {
     const snap = await db.doc('games/' + code).get();
-    if (!snap.exists) return toast(`No table with code ${code}.`);
+    if (!snap.exists) return toast(`Nincs asztal ezzel a kóddal: ${code}.`);
     const d = snap.data();
     if ((d.playerIds || []).includes(myId)) return openTable(code);
-    if (d.status !== 'lobby') { toast('That game has already started. Opening it to watch.'); return openTable(code); }
-    if (d.seats.length >= d.size) { toast('That table is full. Opening it to watch.'); return openTable(code); }
+    if (d.status !== 'lobby') { toast('Ez a játék már elkezdődött. Nézőként csatlakozol.'); return openTable(code); }
+    if (d.seats.length >= d.size) { toast('Ez az asztal megtelt. Nézőként csatlakozol.'); return openTable(code); }
     if (await sit(code)) openTable(code);
   } catch (e) {
     console.warn('Could not join table', e);
-    toast(e?.code === 'permission-denied' ? 'The database refused access. Check the Firestore rules.'
-      : 'Couldn’t reach that table (' + (e?.code || e?.message || 'unknown') + '). Try again.');
+    toast(e?.code === 'permission-denied' ? 'Az adatbázis nem engedélyezte a hozzáférést. Ellenőrizd a Firestore hozzáférési szabályait!'
+      : 'Nem sikerült elérni az asztalt (' + (e?.code || e?.message || 'ismeretlen hiba') + '). Próbáld újra!');
   }
 }
 
@@ -934,7 +934,7 @@ app.addEventListener('click', async (e) => {
     const id = segb.dataset.seg, v = segb.dataset.val;
     if (id === 'osize') onlineSize = +v;
     else if (id === 'lsize') localSetup.n = +v;
-    else if (id.startsWith('lbot')) localSetup.seats[+id.slice(4)].bot = v === 'Computer';
+    else if (id.startsWith('lbot')) localSetup.seats[+id.slice(4)].bot = v === 'Gép';
     store.set('local', localSetup); render(); return;
   }
   const b = e.target.closest('[data-act]');
@@ -948,18 +948,18 @@ app.addEventListener('click', async (e) => {
     case 'open': openTable(b.dataset.code); break;
     case 'join': joinByCode(b.dataset.code); break;
     case 'joincode': joinByCode(document.getElementById('joincode').value); break;
-    case 'sit': if (await sit(G.code)) toast('You’re seated.'); break;
+    case 'sit': if (await sit(G.code)) toast('Csatlakoztál az asztalhoz.'); break;
     case 'leave': await commit((d) => { if (d.status !== 'lobby') return null; d.seats = d.seats.filter((s) => s.bot || s.id !== myId); d.playerIds = d.playerIds.filter((x) => x !== myId); return d; }); goHome(); break;
     case 'addbot': commit((d) => { if (d.status !== 'lobby' || d.seats.length >= d.size) return null; d.seats.push({ id: null, nick: '', bot: true }); return d; }); break;
     case 'kick': { const i = +b.dataset.seat; commit((d) => { if (d.status !== 'lobby' || !d.seats[i]) return null; const s = d.seats.splice(i, 1)[0]; if (!s.bot) d.playerIds = d.playerIds.filter((x) => x !== s.id); return d; }); break; }
     case 'start': startOnline(); break;
     case 'remove':
       if (!removeArmed) { removeArmed = true; render(); break; }
-      try { const code = G.code; goHome(); await db.doc('games/' + code).delete(); toast(`Table ${code} removed.`); } catch { toast('Couldn’t remove the table.'); }
+      try { const code = G.code; goHome(); await db.doc('games/' + code).delete(); toast(`A(z) ${code} kódú asztalt töröltük.`); } catch { toast('Nem sikerült törölni az asztalt.'); }
       break;
     case 'copy': {
       const code = G.code;
-      try { await navigator.clipboard.writeText(code); toast(`Copied ${code}`); } catch { toast(`Table code: ${code}`); }
+      try { await navigator.clipboard.writeText(code); toast(`Kimásolva: ${code}`); } catch { toast(`Asztalkód: ${code}`); }
       break;
     }
     case 'pick': {
@@ -1018,19 +1018,19 @@ window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.
     fs.collection('games').orderBy('updatedAt', 'desc').limit(60).onSnapshot((snap) => {
       lobby = snap.docs.map((d) => decodeGame(d.data()));
       if (view === 'home') { const f = document.activeElement?.id; render(); if (f) document.getElementById(f)?.focus(); }
-    }, (e) => { console.warn(e); toast(e && e.code === 'permission-denied' ? 'The database refused access. Check the Firestore rules (step 4).' : (e && e.code === 'failed-precondition' || /not.*exist|NOT_FOUND/i.test(e && e.message || '')) ? 'The Firestore database doesn’t exist yet (step 3).' : 'Database error: ' + ((e && e.code) || 'unknown')); });
+    }, (e) => { console.warn(e); toast(e && e.code === 'permission-denied' ? 'Az adatbázis nem engedélyezte a hozzáférést. Ellenőrizd a Firestore hozzáférési szabályait!' : (e && e.code === 'failed-precondition' || /not.*exist|NOT_FOUND/i.test(e && e.message || '')) ? 'A Firestore adatbázis még nem létezik. Hozd létre a Firebase konzolon!' : 'Adatbázishiba: ' + ((e && e.code) || 'ismeretlen hiba')); });
   } catch (e) {
     onlineReady = false; console.warn('Online play unavailable:', e);
     const c = (e && e.code) || '';
     onlineError =
-      !window.firebase ? 'The Firebase scripts didn’t load. Check your internet connection or turn off any blocker for this page.' :
-      (e && e.message === 'not configured') ? 'Online play isn’t connected yet: config.js still has the placeholder values.' :
-      c === 'auth/unauthorized-domain' ? 'This web address isn’t allowed yet. In Firebase: Authentication → Settings → Authorized domains → add ' + location.hostname :
-      (c === 'auth/operation-not-allowed' || c === 'auth/admin-restricted-operation') ? 'Anonymous sign-in is turned off. In Firebase: Authentication → Sign-in method → Anonymous → Enable.' :
-      (c === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' || c === 'auth/invalid-api-key') ? 'The apiKey in config.js isn’t valid. Copy it again from Firebase project settings.' :
-      c === 'auth/requests-from-referer-are-blocked.' || /referer/i.test(e && e.message || '') ? 'The API key is restricted and doesn’t allow this address. Add ' + location.origin + '/* to its website restrictions.' :
-      c === 'auth/network-request-failed' ? 'Couldn’t reach Firebase. Check your internet connection.' :
-      'Online play couldn’t start (' + (c || (e && e.message) || 'unknown error') + ').';
+      !window.firebase ? 'A Firebase összetevői nem töltődtek be. Ellenőrizd az internetkapcsolatot és az oldalt érintő blokkolókat!' :
+      (e && e.message === 'not configured') ? 'Az online játék még nincs beállítva: a config.js fájlban még a mintaértékek szerepelnek.' :
+      c === 'auth/unauthorized-domain' ? 'Ez a webcím még nincs engedélyezve. A Firebase konzolon az Authentication → Settings → Authorized domains résznél add hozzá: ' + location.hostname :
+      (c === 'auth/operation-not-allowed' || c === 'auth/admin-restricted-operation') ? 'A névtelen bejelentkezés ki van kapcsolva. A Firebase konzolon engedélyezd: Authentication → Sign-in method → Anonymous → Enable.' :
+      (c === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' || c === 'auth/invalid-api-key') ? 'A config.js fájlban szereplő apiKey érvénytelen. Másold át újra a Firebase projektbeállításaiból!' :
+      c === 'auth/requests-from-referer-are-blocked.' || /referer/i.test(e && e.message || '') ? 'Az API-kulcs korlátozásai nem engedélyezik ezt a címet. A webhelykorlátozásokhoz add hozzá: ' + location.origin + '/*' :
+      c === 'auth/network-request-failed' ? 'Nem sikerült elérni a Firebase szolgáltatást. Ellenőrizd az internetkapcsolatot!' :
+      'Nem sikerült elindítani az online játékot (' + (c || (e && e.message) || 'ismeretlen hiba') + ').';
   }
   onlineChecked = true;
   if (view === 'home') render();
