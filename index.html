@@ -251,6 +251,44 @@ details{padding-top:1rem}
   .centre{padding:.65rem}
 }
 
+/* Clear turn cues and a shared table for head-to-head matches. */
+.player-label{flex:1;min-width:0;display:grid;gap:.4rem}
+.player-label .nm{display:block}
+.turn-badge{display:inline-flex;align-items:center;gap:.5rem;justify-self:start;min-height:1.75rem;padding:.25rem .65rem;border-radius:999px;background:var(--well);color:var(--muted);font-size:.8rem;font-weight:600;line-height:1.2}
+.turn-badge.active{background:var(--ok-soft);color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.turn-badge.active::before,.turn-beacon{content:"";display:inline-block;width:.85rem;height:.85rem;border-radius:50%;background:var(--ok);box-shadow:0 0 0 .3rem var(--ok-soft);flex:0 0 auto}
+.board.turn{box-shadow:0 0 0 .15rem var(--ok),var(--shadow)}
+.turn-message{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem}
+.mine-turn .turn-message>b{font-size:1.2rem}
+.turn-beacon{width:1.1rem;height:1.1rem;margin-inline:.25rem .4rem;animation:turn-glow 1s ease-out 2}
+@keyframes turn-glow{50%{box-shadow:0 0 0 .55rem var(--ok-soft)}}
+.rematch-box{display:grid;gap:.7rem;padding:1rem;border:1px solid var(--line);border-radius:1rem;background:var(--bg)}
+.rematch-box.pending{border-color:var(--brass);background:var(--brass-soft)}
+.rematch-box>.btn{justify-self:start}
+.starter-note{font-size:.95rem;margin:0;max-width:66ch}
+.market-heading{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:.5rem 1rem}
+.market-heading .muted{font-size:.9rem}
+.game.duel{grid-template-columns:minmax(0,1fr) minmax(9rem,.32fr) minmax(0,1fr);align-items:stretch}
+.game.duel>.duel-seat{container-type:inline-size;min-width:0;grid-column:auto;grid-row:auto;position:static;order:0}
+.game.duel>.duel-seat:first-child{grid-column:1;grid-row:1}
+.game.duel>.duel-seat:nth-child(3){grid-column:3;grid-row:1}
+.duel-seat>.board{height:100%}
+.duel-centre{grid-column:2;grid-row:1;container-type:inline-size;min-width:0;display:flex;order:0}
+.duel-centre .centre{width:100%;align-content:flex-start;--t:clamp(1.5rem,calc((100cqw - 2.5rem)/3),4rem)}
+.game.duel>.duel-market{grid-column:1/-1;grid-row:2;order:0}
+.duel-market .facs{grid-template-columns:repeat(5,max-content);--t:clamp(2rem,calc((100cqw - 16rem)/10),4rem)}
+.game.duel>.final{grid-column:1/-1;grid-row:3;order:0}
+@media (max-width:63.999rem){
+  .game.duel{grid-template-columns:minmax(0,1fr)}
+  .game.duel>.duel-seat:first-child,.game.duel>.duel-seat:nth-child(3){grid-column:1;grid-row:auto;order:4}
+  .game.duel>.duel-seat.mine{order:1}
+  .game.duel>.duel-centre{grid-column:1;grid-row:auto;order:2}
+  .duel-centre .centre{--t:clamp(1.75rem,6vw,2.5rem)}
+  .game.duel>.duel-market{grid-column:1;grid-row:auto;order:3}
+  .duel-market .facs{grid-template-columns:repeat(3,max-content);--t:clamp(1.5rem,calc((100cqw - 7rem)/6),3rem)}
+  .game.duel>.final{grid-column:1;grid-row:auto;order:5}
+}
+
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -319,7 +357,7 @@ const Engine = (() => {
       factories: Array.from({ length: FACTORIES[n] }, () => []),
       center: [], centerToken: true,
       players: Array.from({ length: n }, emptyPlayer),
-      turn: first, firstNext: null, round: 1, seq: 0,
+      turn: first, initialFirst: first, firstNext: null, round: 1, seq: 0,
       status: 'playing', lastMove: null, lastRound: null, final: null, log: [],
     };
     fillFactories(s, rng);
@@ -499,6 +537,70 @@ const Engine = (() => {
 
 </script>
 <script>
+// Table-level matches are separate from the rounds inside an Azul game.
+const MatchFlow = (() => {
+  const humans = (d) => d.seats.filter((s) => !s.bot && s.id).map((s) => s.id);
+  const identity = (d) => d.matchId || `legacy:${d.createdAt}:${d.state?.seq}`;
+  function launch(d, first, id, number, rng = Math.random) {
+    d.state = Engine.newGame(d.size, rng, first);
+    d.status = 'playing';
+    d.startingSeat = first;
+    d.matchId = id;
+    d.matchNumber = number;
+    d.rematch = null;
+    return d;
+  }
+  function first(d, actor, id, rng = Math.random) {
+    if (d.status !== 'lobby' || d.hostId !== actor || d.seats.length !== d.size) return null;
+    return launch(d, Math.floor(rng() * d.size), id, 1, rng);
+  }
+  function nextSeat(d, rng = Math.random) {
+    const previous = d.startingSeat ?? d.state?.initialFirst;
+    // Older tables did not retain the first player; draw once on migration.
+    return Number.isInteger(previous) && previous >= 0 && previous < d.size
+      ? (previous + 1) % d.size : Math.floor(rng() * d.size);
+  }
+  function ready(d, rng) {
+    if (humans(d).every((id) => d.rematch.acceptedIds.includes(id))) {
+      return launch(d, d.rematch.firstSeat, d.rematch.id, (d.matchNumber || 1) + 1, rng);
+    }
+    return d;
+  }
+  function request(d, actor, id, rng = Math.random) {
+    if (d.status !== 'over' || d.state?.status !== 'over' || d.hostId !== actor || !humans(d).includes(actor) || d.rematch) return null;
+    d.rematch = { id, fromMatch: identity(d), requestedBy: actor, acceptedIds: [actor], firstSeat: nextSeat(d, rng) };
+    return ready(d, rng);
+  }
+  function accept(d, actor, requestId, rng = Math.random) {
+    const r = d.rematch;
+    if (d.status !== 'over' || !r || r.id !== requestId || r.fromMatch !== identity(d) || !humans(d).includes(actor) || r.acceptedIds.includes(actor)) return null;
+    r.acceptedIds.push(actor);
+    return ready(d, rng);
+  }
+  function cancel(d, actor, requestId) {
+    if (d.status !== 'over' || !d.rematch || d.rematch.id !== requestId || !humans(d).includes(actor)) return null;
+    d.rematch = null;
+    return d;
+  }
+  return { first, request, accept, cancel, nextSeat };
+})();
+
+const TurnCues = {
+  create() {
+    let last = null;
+    return {
+      observe(key, eligible) {
+        const changed = last !== key;
+        last = key;
+        return changed && eligible;
+      },
+      reset() { last = null; },
+    };
+  },
+};
+
+</script>
+<script>
 (() => {
 const NAMES = ['Nyúltülök', 'Vöröspandi', 'Rózsa', 'Kisherceg', 'Cicavirág'];
 const NAMES_PL = ['Nyúltülök', 'Vöröspandi', 'Rózsa', 'Kisherceg', 'Cicavirág'];
@@ -522,6 +624,43 @@ let localSetup = store.get('local', { n: 2, seats: [{ nick: '', bot: false }, { 
 let onlineSize = 2, onlinePrivate = true;
 let nick = store.get('nick', '');
 let toastTimer = null;
+const newMatchId = () => globalThis.crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2);
+const turnCues = TurnCues.create();
+let soundEnabled = store.get('sound', true), audioContext = null;
+
+function unlockAudio() {
+  if (!soundEnabled) return;
+  try {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return;
+    audioContext ||= new Context();
+    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+  } catch (e) { console.warn('Hangjelzés nem érhető el', e); }
+}
+function playTurnSound() {
+  if (!soundEnabled || audioContext?.state !== 'running') return;
+  try {
+    const start = audioContext.currentTime;
+    [660, 880].forEach((frequency, i) => {
+      const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
+      const at = start + i * .19;
+      oscillator.type = 'sine'; oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(.075, at + .025);
+      gain.gain.exponentialRampToValueAtTime(.001, at + .17);
+      oscillator.connect(gain); gain.connect(audioContext.destination);
+      oscillator.start(at); oscillator.stop(at + .18);
+    });
+  } catch (e) { console.warn('Hangjelzés nem érhető el', e); }
+}
+function notifyTurn() {
+  if (!G?.state) return;
+  const match = G.doc?.matchId || G.matchId || G.code || 'local';
+  const key = `${match}:${G.state.seq}:${G.state.turn}:${G.state.status}`;
+  if (turnCues.observe(key, canAct())) playTurnSound();
+}
+document.addEventListener('pointerdown', unlockAudio, { capture: true });
+document.addEventListener('keydown', unlockAudio, { capture: true });
 
 function toast(msg) {
   clearTimeout(toastTimer);
@@ -571,10 +710,12 @@ function render() {
   if (view === 'home') app.innerHTML = homeHTML();
   else app.innerHTML = gameHTML();
   renderOverlays();
+  notifyTurn();
 }
 
 function header(extra = '') {
-  return `<header class="top"><div class="mark">${tileSvg(2)}<span>Tessera</span></div><div class="grow"></div>${extra}</header>`;
+  const sound = view === 'game' ? `<button class="btn sm sound-toggle" data-act="sound" aria-pressed="${soundEnabled}" title="Hangjelzés minden saját kör elején. Az első kattintás engedélyezi a hangot.">Hang: ${soundEnabled ? 'be' : 'ki'}</button>` : '';
+  return `<header class="top"><div class="mark">${tileSvg(2)}<span>Tessera</span></div><div class="grow"></div>${sound}${extra}</header>`;
 }
 
 function homeHTML() {
@@ -620,6 +761,7 @@ function homeHTML() {
     <li>Tedd a csempéket az öt mintasorod egyikébe! Egy sorba csak azonos mintájú csempék kerülhetnek, és csak olyan mintából, amely még nincs a falad megfelelő sorában. A felesleges csempék a padlósorba kerülnek.</li>
     <li>Amikor elfogynak a csempék a kínálótálcákról és középről, minden teljes mintasorból egy csempe átkerül a falra. Az önálló csempe 1 pontot ér. Ha más csempékhez kapcsolódik, az összefüggő vízszintes és függőleges sor minden csempéje 1 pontot ér; az új csempe mindkét irányban beleszámít. A padlósor mezői rendre −1, −1, −2, −2, −2, −3, −3 pontot érnek.</li>
     <li>A játék annak a fordulónak a végén ér véget, amelyben valaki kitölt egy vízszintes sort a falán. Bónuszok: +2 pont minden teljes sorért, +7 pont minden teljes oszlopért, +10 pont egy minta mind az öt csempéjéért. A legtöbb pontot gyűjtő játékos nyer. Pontegyenlőségnél a több teljes sor dönt.</li>
+    <li>Itt az első meccs kezdőjátékosát kisorsoljuk, az újrajátszásoknál pedig sorban váltjuk a kezdőt. A meccsen belüli fordulókat az 1-es jelölő megszerzője kezdi. A hivatalos Azul-szabály szerint az első játékot az kezdi, aki legutóbb járt Portugáliában; az új meccsek közötti váltás a mi házi szabályunk.</li>
   </ol></details>`;
 }
 
@@ -636,6 +778,17 @@ function gameHTML() {
   const codeChip = G.mode === 'online' ? `<button class="chip code" data-act="copy" title="Asztalkód másolása">${esc(G.code)}</button>` : '';
   const head = top(`<span class="chip num">${s.round}. forduló</span>${codeChip}${back}`);
   const f = focusSeat();
+  if (s.players.length === 2) {
+    const left = G.mode === 'online' ? f : 0, right = 1 - left;
+    const playerBoard = (i) => `<div class="duel-seat ${i === f ? 'mine' : ''}" data-player="${i}">${boardHTML(i, false)}</div>`;
+    return head + statusHTML() + `<div class="game duel">
+      ${playerBoard(left)}
+      <section class="duel-centre" aria-label="Közös középmező">${marketHTML('centre')}</section>
+      ${playerBoard(right)}
+      ${marketHTML('factories')}
+      ${s.status === 'over' ? finalHTML() : ''}
+    </div>`;
+  }
   const others = s.players.map((_, i) => i).filter((i) => i !== f);
   return head + `
   ${statusHTML()}
@@ -664,7 +817,7 @@ function statusHTML() {
   else if (G.seats[t]?.bot) msg = `${esc(seatName(t))} gondolkodik…`;
   else msg = `Várakozás: <b>${esc(seatName(t))}</b>.`;
   const last = s.lastMove ? `<span class="muted" style="font-size:13px;width:100%">${describeMove(s.lastMove)}</span>` : '';
-  return `<div class="status ${me ? 'mine-turn' : ''}"><span class="grow">${msg}</span>${last}</div>`;
+  return `<div class="status ${me ? 'mine-turn' : ''}" role="status"><span class="grow turn-message">${me ? '<span class="turn-beacon" aria-hidden="true"></span>' : ''}${msg}</span>${last}</div>`;
 }
 
 function countSel() {
@@ -673,7 +826,7 @@ function countSel() {
   return arr.filter((c) => c === sel.color).length;
 }
 
-function marketHTML() {
+function marketHTML(part = 'all') {
   const s = G.state, act = canAct();
   const lm = s.lastMove;
   const btn = (src, c) => {
@@ -682,8 +835,11 @@ function marketHTML() {
   };
   const facs = s.factories.map((f, i) => `<div class="fac ${lm && lm.src === i ? 'recent' : ''}"><span class="n">${i + 1}</span>${f.length ? `<div class="g">${f.map((c) => btn(i, c)).join('')}</div>` : ''}</div>`).join('');
   const groups = [0, 1, 2, 3, 4].map((c) => { const n = s.center.filter((x) => x === c).length; return n ? `<div class="grp">${Array(n).fill(0).map(() => btn('c', c)).join('')}</div>` : ''; }).join('');
+  const centre = `<div class="centre"><span class="lab">Közép</span>${s.centerToken ? tileSvg(-1) : ''}${groups}${!s.centerToken && !s.center.length ? '<span class="muted">Üres</span>' : ''}</div>`;
+  if (part === 'centre') return centre;
+  if (part === 'factories') return `<section class="market duel-market" aria-label="Kínálótálcák"><div class="market-heading"><b>Kínálótálcák</b><span class="muted">Válassz egy mintát — a tálca többi csempéje középre kerül.</span></div><div class="facs">${facs}</div></section>`;
   return `<section class="market" aria-label="Csempekínálat"><div class="facs">${facs}</div>
-    <div class="centre"><span class="lab">Közép</span>${s.centerToken ? tileSvg(-1) : ''}${groups}${!s.centerToken && !s.center.length ? '<span class="muted" style="font-size:13px">Üres</span>' : ''}</div></section>`;
+    ${centre}</section>`;
 }
 
 function boardHTML(pi, compact) {
@@ -705,11 +861,23 @@ function boardHTML(pi, compact) {
   }).join('')).join('');
   const fl = Engine.FLOOR.map((pen, k) => `<span class="fs">${k < p.floor.length ? tileSvg(p.floor[k]) : '<span class="slot"></span>'}<i>−${pen}</i></span>`).join('');
   const turn = s.status === 'playing' && s.turn === pi;
+  const mine = G.mode === 'online' ? isMe(pi) : !G.seats[pi].bot;
+  const badge = `<span class="turn-badge ${turn ? 'active' : ''}">${turn ? (mine ? 'Te következel' : 'Ő következik') : s.status === 'over' ? 'Játék vége' : 'Várakozik'}</span>`;
   return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" aria-label="${esc(seatName(pi))} táblája">
-    <div class="bhead">${turn ? '<span class="dot" title="Ő következik"></span>' : ''}<span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span><span class="sc num">${p.score}</span></div>
+    <div class="bhead"><div class="player-label"><span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span>${badge}</div><span class="sc num">${p.score}</span></div>
     <div class="bgrid"><div class="lines">${lines}</div><div class="wall">${wall}</div></div>
     <button class="floor ${active ? 'ok' : ''}" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Padlósor">${fl}</button>
   </section>`;
+}
+
+function rematchHTML() {
+  if (G.mode === 'local') return `<div class="rematch-box"><b>Jöhet a következő meccs?</b><span class="muted">A következő kezdő: ${esc(seatName(((G.state.initialFirst ?? 0) + 1) % G.seats.length))}.</span><button class="btn primary" data-act="rematch">Új játék ugyanezekkel a játékosokkal</button></div>`;
+  const d = G.doc, r = d.rematch;
+  const participant = d.seats.some((s) => !s.bot && s.id === myId);
+  if (!r) return `<div class="rematch-box"><b>Marad az asztal, maradnak a játékosok.</b><span class="muted">${d.hostId === myId ? 'Kérj új játékot! A többiek jóváhagyása után mindenkinek automatikusan elindul.' : 'Új játékot a házigazda kérhet. Az induláshoz a te jóváhagyásod is kell.'}</span>${d.hostId === myId ? '<button class="btn primary" data-act="rematch">Új játék kérése</button>' : ''}</div>`;
+  const approved = r.acceptedIds.includes(myId);
+  const waiting = d.seats.filter((s) => !s.bot && !r.acceptedIds.includes(s.id)).map((s) => esc(s.nick || 'Játékos')).join(', ');
+  return `<div class="rematch-box pending" role="status"><b>Új játék ugyanennél az asztalnál</b><span>A következő kezdő: <strong>${esc(seatName(r.firstSeat))}</strong>.</span><span class="muted">${approved ? 'Jóváhagyásra várunk: ' + waiting : 'A házigazda új játékot szeretne. Indulhat?'}</span>${participant ? `<div class="row">${!approved ? `<button class="btn primary" data-act="accept-rematch" data-request="${esc(r.id)}">Igen, jöhet!</button>` : ''}<button class="btn" data-act="cancel-rematch" data-request="${esc(r.id)}">${d.hostId === myId ? 'Kérés visszavonása' : 'Most nem'}</button></div>` : ''}</div>`;
 }
 
 function finalHTML() {
@@ -718,10 +886,10 @@ function finalHTML() {
   const w = s.winners.map((i) => seatName(i));
   const title = w.length > 1 ? `Közös győzelem: ${w.map(esc).join(' és ')}` : `${esc(w[0])} nyert!`;
   const rows = order.map((i) => { const b = s.final[i]; return `<tr class="${s.winners.includes(i) ? 'win' : ''}"><td>${esc(seatName(i))}</td><td>${b.rows}</td><td>${b.cols}</td><td>${b.colors}</td><td>+${b.points}</td><td><b>${s.players[i].score}</b></td></tr>`; }).join('');
-  const canRematch = G.mode === 'local' || (G.doc && G.doc.hostId === myId);
   return `<section class="final"><h2>${title}</h2>
     <div style="overflow-x:auto"><table><thead><tr><th>Játékos</th><th>Sorok</th><th>Oszlopok</th><th>Minták</th><th>Bónusz</th><th>Összesen</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="row">${canRematch ? '<button class="btn primary" data-act="rematch">Újrajátszás</button>' : '<span class="muted">A házigazda indíthat új játékot.</span>'}<button class="btn" data-act="home">${G.mode === 'online' ? 'Vissza az asztalokhoz' : 'Menü'}</button>
+    ${rematchHTML()}
+    <div class="row"><button class="btn" data-act="home">${G.mode === 'online' ? 'Vissza az asztalokhoz' : 'Menü'}</button>
     ${G.mode === 'online' && G.doc?.hostId === myId ? `<button class="btn danger" data-act="remove">${removeArmed ? 'Kattints újra a törléshez' : 'Asztal törlése'}</button>` : ''}</div></section>`;
 }
 
@@ -739,6 +907,7 @@ function lobbyHTML() {
     <div class="row"><span class="bigcode">${esc(d.code)}</span><button class="btn sm" data-act="copy">Kód másolása</button></div>
     <p class="muted" style="margin:0;max-width:52ch">Küldd el ezt a kódot a játékostársaidnak! Nyissák meg ezt az oldalt, adják meg a kódot az <b>Online játék</b> résznél, és csatlakozzanak az asztalhoz.</p>
     <div class="seats">${seats}</div>
+    <p class="muted starter-note">Az első meccs kezdőjét kisorsoljuk. Újrajátszásnál váltjuk a kezdőt; a meccsen belüli fordulókban az 1-es jelölő dönt.</p>
     <div class="row">
       ${!joined && !full ? '<button class="btn primary" data-act="sit">Csatlakozás</button>' : ''}
       ${host ? `<button class="btn primary" data-act="start" ${full ? '' : 'disabled'}>Játék indítása</button>${!full ? '<button class="btn" data-act="addbot">Gépi játékos hozzáadása</button>' : ''}` : (joined ? '<span class="muted">Várakozás a házigazdára a játék indításához.</span>' : '')}
@@ -774,6 +943,7 @@ function scheduleBot() {
   if (botTimer || !s || s.status !== 'playing' || !G.seats[s.turn]?.bot) return;
   if (G.mode === 'online' && mySeat() < 0) return;
   const seq = s.seq;
+  const matchId = G.doc?.matchId;
   botTimer = setTimeout(async () => {
     botTimer = null;
     if (!G?.state || G.state.seq !== seq) return scheduleBot();
@@ -782,7 +952,7 @@ function scheduleBot() {
       afterState(); render();
     } else {
       await commit((d) => {
-        if (!d.state || d.state.seq !== seq || d.status !== 'playing' || !d.seats[d.state.turn]?.bot) return null;
+        if (d.matchId !== matchId || !d.state || d.state.seq !== seq || d.status !== 'playing' || !d.seats[d.state.turn]?.bot) return null;
         d.state = Engine.applyMove(d.state, Engine.botMove(d.state));
         d.status = d.state.status === 'over' ? 'over' : 'playing';
         return d;
@@ -797,11 +967,12 @@ async function doMove(line) {
   if (!Engine.legalMoves(G.state).some((m) => m.src === move.src && m.color === move.color && m.line === line)) return;
   sel = null;
   const prev = G.state, next = Engine.applyMove(prev, move);
+  const matchId = G.doc?.matchId;
   G.state = next; afterState(); render();
   if (G.mode === 'online') {
     const me = mySeat();
     const ok = await commit((d) => {
-      if (!d.state || d.state.seq !== prev.seq || d.state.turn !== me) return null;
+      if (d.matchId !== matchId || !d.state || d.state.seq !== prev.seq || d.state.turn !== me) return null;
       d.state = next; d.status = next.status === 'over' ? 'over' : 'playing';
       return d;
     });
@@ -816,7 +987,14 @@ function encodeGame(data) {
   return { ...data, state: data.state == null ? null : JSON.stringify(data.state) };
 }
 function decodeGame(data) {
-  return data && { ...data, state: typeof data.state === 'string' ? JSON.parse(data.state) : data.state };
+  if (!data) return data;
+  let state = typeof data.state === 'string' ? JSON.parse(data.state) : data.state;
+  // Recover the original starter while a legacy game is still in round one.
+  if (state?.status === 'playing' && state.round === 1 && !Number.isInteger(state.initialFirst) && state.players?.length && Number.isInteger(state.seq)) {
+    const n = state.players.length;
+    state = { ...state, initialFirst: ((state.turn - state.seq) % n + n) % n };
+  }
+  return { ...data, state };
 }
 
 async function commit(mutate, quiet, code = G.code) {
@@ -867,15 +1045,24 @@ function openTable(code) {
   code = code.toUpperCase();
   unsubGame?.(); clearTimeout(botTimer); botTimer = null; sel = null; removeArmed = false;
   G = { mode: 'online', code, doc: null, seats: [], state: null };
+  turnCues.reset();
   view = 'game'; render();
+  window.scrollTo?.({ top: 0, behavior: 'auto' });
   unsubGame = db.doc('games/' + code).onSnapshot((snap) => {
     if (!G || G.code !== code) return;
     if (!snap.exists) { if (!snap.metadata.fromCache) { toast(`A(z) ${code} kódú asztal nem létezik, vagy már törölték.`); goHome(); } return; }
     const d = JSON.parse(JSON.stringify(snap.data()));
+    const changedMatch = !!G.doc && G.doc.matchId !== d.matchId;
+    if (changedMatch) {
+      sel = null; bannerFor = null;
+      clearTimeout(botTimer); botTimer = null;
+      clearTimeout(bannerTimer); bannerTimer = null;
+    }
     G.doc = d; G.seats = d.seats;
-    if (!G.state || !d.state || d.state.seq >= G.state.seq || d.status !== 'playing') G.state = d.state;
+    if (changedMatch || !G.state || !d.state || d.state.seq >= G.state.seq || d.status !== 'playing') G.state = d.state;
     refreshNames(d.seats.map((s) => s.id));
     afterState(); render();
+    if (changedMatch) window.scrollTo?.({ top: 0, behavior: 'auto' });
   }, () => { toast('Megszakadt a kapcsolat az asztallal. Nyisd meg újra az Asztalok nézetből!'); });
 }
 
@@ -908,11 +1095,8 @@ async function joinByCode(code) {
 }
 
 function startOnline() {
-  return commit((d) => {
-    if (d.status !== 'lobby' || d.seats.length !== d.size || d.hostId !== myId) return null;
-    d.state = Engine.newGame(d.size, Math.random, Math.floor(Math.random() * d.size));
-    d.status = 'playing'; return d;
-  });
+  const id = newMatchId();
+  return commit((d) => MatchFlow.first(d, myId, id));
 }
 
 // ---------- local ----------
@@ -921,7 +1105,7 @@ function startLocal() {
   const seats = localSetup.seats.slice(0, n).map((s) => ({ nick: s.nick.trim(), bot: s.bot }));
   if (seats.every((s) => s.bot)) seats[0].bot = false;
   unsubGame?.(); unsubGame = null;
-  G = { mode: 'local', seats, state: Engine.newGame(n, Math.random, Math.floor(Math.random() * n)) };
+  G = { mode: 'local', matchId: newMatchId(), seats, state: Engine.newGame(n, Math.random, Math.floor(Math.random() * n)) };
   view = 'game'; sel = null; bannerFor = null; afterState(); render();
 }
 
@@ -942,6 +1126,7 @@ app.addEventListener('click', async (e) => {
   const act = b.dataset.act;
   if (act !== 'remove') removeArmed = false;
   switch (act) {
+    case 'sound': soundEnabled = !soundEnabled; store.set('sound', soundEnabled); if (soundEnabled) { unlockAudio(); playTurnSound(); } render(); break;
     case 'home': goHome(); break;
     case 'local': startLocal(); break;
     case 'create': if (onlineReady) createTable(); break;
@@ -970,9 +1155,16 @@ app.addEventListener('click', async (e) => {
     case 'cancel': sel = null; render(); break;
     case 'place': doMove(+b.dataset.line); break;
     case 'rematch':
-      if (G.mode === 'local') { G.state = Engine.newGame(G.seats.length, Math.random, Math.floor(Math.random() * G.seats.length)); bannerFor = null; afterState(); render(); }
-      else commit((d) => { if (d.status !== 'over' || d.hostId !== myId) return null; d.state = Engine.newGame(d.size, Math.random, Math.floor(Math.random() * d.size)); d.status = 'playing'; return d; });
+      if (G.mode === 'local') {
+        G.state = Engine.newGame(G.seats.length, Math.random, ((G.state.initialFirst ?? 0) + 1) % G.seats.length);
+        G.matchId = newMatchId(); bannerFor = null; sel = null; afterState(); render();
+      } else {
+        const id = newMatchId();
+        await commit((d) => MatchFlow.request(d, myId, id));
+      }
       break;
+    case 'accept-rematch': await commit((d) => MatchFlow.accept(d, myId, b.dataset.request)); break;
+    case 'cancel-rematch': await commit((d) => MatchFlow.cancel(d, myId, b.dataset.request)); break;
   }
 });
 overlay.addEventListener('click', (e) => { if (e.target.closest('[data-act="closebanner"]')) { bannerFor = 'x'; renderOverlays(); } });
