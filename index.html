@@ -159,6 +159,98 @@ summary{cursor:pointer;font-weight:600}
 .final h2{font-size:30px}
 .win{color:var(--brass);font-weight:700}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* Scale the workshop with the screen; keep the board's ten columns in view. */
+html{font-size:clamp(16px,.9vw,28px)}
+body{font-size:1rem;padding-inline:max(clamp(.75rem,2vw,4rem),env(safe-area-inset-left,0px)) max(clamp(.75rem,2vw,4rem),env(safe-area-inset-right,0px));padding-block:1.25rem 2.5rem}
+.wrap{width:100%;max-width:180rem;gap:1.25rem}
+.label{font-size:.75rem}
+.btn{min-height:2.75rem;padding:.6rem 1.15rem;font-size:1rem}
+.btn.sm{min-height:2.25rem;padding:.4rem .9rem;font-size:.9rem}
+.seg button{min-height:2.75rem;padding:.5rem 1rem;font-size:1rem}
+input[type=text]{min-height:3rem;padding:.65rem .85rem;border-radius:.75rem}
+input[type=checkbox]{width:1.1rem;height:1.1rem;accent-color:var(--brass)}
+.top{gap:.75rem}
+.mark{gap:.65rem;font-size:2rem}
+.mark .tile{width:1.8rem;height:1.8rem}
+.chip{min-height:2.25rem;gap:.4rem;padding:.35rem .8rem;font-size:.9rem}
+.hero{gap:1rem;padding-block:.5rem}
+.hero h1{font-size:clamp(2.75rem,5vw,6rem)}
+.hero p{max-width:64ch;font-size:1.1rem}
+.hero-tiles{gap:1rem}
+.hero-tiles figure{gap:.5rem}
+.hero-tiles .tile{width:clamp(3rem,7vw,8rem)}
+.hero-tiles figcaption{font-size:.9rem}
+.cols{gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,28rem),1fr))}
+.panel{padding:1.25rem;gap:1rem;border-radius:1.25rem}
+.panel h2{font-size:1.75rem}
+.row{gap:.75rem}
+.row>input{flex-basis:10rem}
+.list,.seats{gap:.6rem}
+.tablecard,.seat{gap:.75rem;padding:.75rem .9rem;border-radius:.85rem}
+.tablecard .who,.empty,.rules{font-size:1rem}
+.empty{padding:1rem}
+.seatrow{gap:.6rem;flex-wrap:wrap}
+.seatrow input{flex:1 1 8rem}
+details{padding-top:1rem}
+.rules li{margin-block:.4rem}
+.game{gap:1.25rem;grid-template-columns:minmax(0,1fr);align-items:start}
+.mine{min-width:0;container-type:inline-size}
+.status{gap:.75rem;min-height:3.25rem;padding:.8rem 1rem;border-radius:1rem;font-size:1.05rem}
+.status>.muted{font-size:.9rem!important}
+.opps{gap:.75rem;padding-bottom:.35rem;min-width:0}
+.market{container-type:inline-size;padding:1rem;gap:1rem;border-radius:1.25rem;min-width:0;--t:clamp(2rem,3vw,6rem)}
+.facs{display:grid;grid-template-columns:repeat(3,max-content);gap:1rem;--t:clamp(1.5rem,calc((100cqw - 10rem)/6),5rem)}
+.fac{width:calc(var(--t)*2 + 2rem);height:calc(var(--t)*2 + 2rem)}
+.fac .g{gap:.3rem}
+.fac .n{top:.2rem;font-size:.8rem}
+.centre{padding:.85rem;gap:.5rem;min-height:calc(var(--t) + 2rem);border-radius:1rem}
+.centre .lab{font-size:.8rem}
+.grp{max-width:100%;flex-wrap:wrap;gap:.2rem;padding:.2rem}
+.board{padding:1rem;gap:.85rem;border-radius:1.25rem;--g:.3rem}
+.board:not(.compact){--t:clamp(1.25rem,calc((100cqw - 5.5rem)/10),7rem)}
+.board.compact{container-type:inline-size;flex:1 0 16rem;min-width:0;padding:.75rem;gap:.6rem;--g:.12rem;--t:clamp(.875rem,calc((100cqw - 1rem)/10),2rem)}
+.bhead{gap:.6rem}
+.board.compact .bhead .nm{font-size:.95rem}
+.bhead .sc{font-size:2.25rem}
+.board.compact .bhead .sc{font-size:1.6rem}
+.dot{width:.6rem;height:.6rem}
+.floor{padding:.3rem}
+.fs{gap:.2rem}
+.fs i{font-size:.8rem}
+.waiting{gap:1rem}
+.bigcode{font-size:clamp(2.25rem,5vw,4rem)}
+.toast{bottom:calc(1.25rem + env(safe-area-inset-bottom,0px));padding:.8rem 1.1rem;font-size:1rem;border-radius:.85rem}
+.banner .card{max-width:36rem;padding:1rem 1.25rem;gap:.6rem}
+.banner table,.final table{font-size:1rem}
+.banner td,.final td,.final th{padding:.4rem .5rem}
+.final{padding:1.25rem;gap:1rem;border-radius:1.25rem}
+.final h2{font-size:2.25rem}
+.final th{font-size:.85rem}
+@media (min-width:68.75rem){
+  .game{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+  .mine{grid-column:2;grid-row:1/span 3;position:sticky;top:1rem}
+}
+@media (max-width:68.749rem){
+  .market{order:1}
+  .mine{order:2}
+  .opps{order:3}
+  .final{order:4}
+  .mine{grid-column:auto;grid-row:auto;position:static}
+  .board:not(.compact){--t:clamp(1.25rem,calc((100cqw - 5.5rem)/10),5rem)}
+}
+@media (max-width:44rem){
+  .wrap{gap:1rem}
+  .hero-tiles{gap:.6rem}
+  .hero-tiles .tile{width:clamp(2.75rem,14vw,4rem)}
+  .hero-tiles figcaption{font-size:.75rem}
+  .panel{padding:1rem}
+  .market{padding:.75rem;gap:.75rem}
+  .facs{gap:.5rem;--t:clamp(1.5rem,calc((100cqw - 7rem)/6),3rem)}
+  .fac{width:calc(var(--t)*2 + 1.5rem);height:calc(var(--t)*2 + 1.5rem)}
+  .board.compact{flex-basis:15rem}
+  .centre{padding:.65rem}
+}
+
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
