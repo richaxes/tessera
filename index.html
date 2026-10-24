@@ -906,7 +906,7 @@ window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.
     const cred = auth.currentUser ? { user: auth.currentUser } : await auth.signInAnonymously();
     myId = cred.user.uid;
     const fs = firebase.firestore();
-    fs.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false });
+    fs.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true });
     const wrapDoc = (snap) => ({ exists: snap.exists, data: () => decodeGame(snap.data()), metadata: { fromCache: snap.metadata.fromCache } });
     db = {
       fs,
