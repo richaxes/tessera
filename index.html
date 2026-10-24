@@ -716,6 +716,15 @@ async function doMove(line) {
 }
 
 // ---------- online ----------
+// Firestore cannot store the nested arrays used by factories and player walls.
+// Keep table metadata queryable and serialize only the rules engine's state.
+function encodeGame(data) {
+  return { ...data, state: data.state == null ? null : JSON.stringify(data.state) };
+}
+function decodeGame(data) {
+  return data && { ...data, state: typeof data.state === 'string' ? JSON.parse(data.state) : data.state };
+}
+
 async function commit(mutate, quiet, code = G.code) {
   const ref = db.fs.doc('games/' + code);
   let last;
@@ -724,15 +733,15 @@ async function commit(mutate, quiet, code = G.code) {
       return await db.fs.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         if (!snap.exists) return false;
-        const d = mutate(JSON.parse(JSON.stringify(snap.data())));
+        const d = mutate(JSON.parse(JSON.stringify(decodeGame(snap.data()))));
         if (!d) return false;
         d.updatedAt = Date.now();
-        tx.set(ref, d);
+        tx.set(ref, encodeGame(d));
         return true;
       });
     } catch (e) {
       last = e; console.warn('Save failed', e);
-      if (e && e.code === 'permission-denied') break;
+      if (e && ['permission-denied', 'invalid-argument', 'failed-precondition', 'not-found'].includes(e.code)) break;
       await sleep(400 + Math.random() * 600);
     }
   }
@@ -797,7 +806,11 @@ async function joinByCode(code) {
     if (d.status !== 'lobby') { toast('That game has already started. Opening it to watch.'); return openTable(code); }
     if (d.seats.length >= d.size) { toast('That table is full. Opening it to watch.'); return openTable(code); }
     if (await sit(code)) openTable(code);
-  } catch { toast('Couldn’t reach that table. Try again.'); }
+  } catch (e) {
+    console.warn('Could not join table', e);
+    toast(e?.code === 'permission-denied' ? 'The database refused access. Check the Firestore rules.'
+      : 'Couldn’t reach that table (' + (e?.code || e?.message || 'unknown') + '). Try again.');
+  }
 }
 
 function startOnline() {
@@ -893,15 +906,15 @@ window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.
     const cred = auth.currentUser ? { user: auth.currentUser } : await auth.signInAnonymously();
     myId = cred.user.uid;
     const fs = firebase.firestore();
-    try { fs.settings({ experimentalForceLongPolling: true, merge: true }); } catch (e) { console.warn(e); }
-    const wrapDoc = (snap) => ({ exists: snap.exists, data: () => snap.data(), metadata: { fromCache: snap.metadata.fromCache } });
+    fs.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false });
+    const wrapDoc = (snap) => ({ exists: snap.exists, data: () => decodeGame(snap.data()), metadata: { fromCache: snap.metadata.fromCache } });
     db = {
       fs,
       doc(path) {
         const ref = fs.doc(path);
         return {
           get: async () => wrapDoc(await ref.get()),
-          set: (d) => ref.set(d),
+          set: (d) => ref.set(encodeGame(d)),
           delete: () => ref.delete(),
           onSnapshot: (next, err) => ref.onSnapshot((snap) => next(wrapDoc(snap)), err),
         };
@@ -909,7 +922,7 @@ window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.
     };
     onlineReady = true;
     fs.collection('games').orderBy('updatedAt', 'desc').limit(60).onSnapshot((snap) => {
-      lobby = snap.docs.map((d) => d.data());
+      lobby = snap.docs.map((d) => decodeGame(d.data()));
       if (view === 'home') { const f = document.activeElement?.id; render(); if (f) document.getElementById(f)?.focus(); }
     }, (e) => { console.warn(e); toast(e && e.code === 'permission-denied' ? 'The database refused access. Check the Firestore rules (step 4).' : (e && e.code === 'failed-precondition' || /not.*exist|NOT_FOUND/i.test(e && e.message || '')) ? 'The Firestore database doesn’t exist yet (step 3).' : 'Database error: ' + ((e && e.code) || 'unknown')); });
   } catch (e) {
