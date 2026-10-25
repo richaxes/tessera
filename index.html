@@ -958,7 +958,7 @@ function seg(id, opts, cur) {
 function seriesHTML() {
   if (G.mode !== 'online') return '';
   const summary = RoomSeries.stats({ ...G.doc, seats: G.seats, state: G.state });
-  return `<details class="room-series" ${summary.games ? 'open' : ''}><summary>Szoba összesítője · ${summary.games} befejezett meccs</summary><div class="room-scores"><table><thead><tr><th>Játékos</th><th>Összes pont</th><th>Győzelem</th><th>Döntetlen</th></tr></thead><tbody>${summary.players.map((p, i) => `<tr><th>${esc(seatName(i))}</th><td>${p.points}</td><td>${p.wins}</td><td>${p.draws}</td></tr>`).join('')}</tbody></table></div><p class="muted">A lezárt meccsek végső pontszámai. Újrajátszáskor tovább gyűlnek ebben a szobában.</p></details>`;
+  return `<details class="room-series"><summary>Szoba összesítője · ${summary.games} befejezett meccs</summary><div class="room-scores"><table><thead><tr><th>Játékos</th><th>Összes pont</th><th>Győzelem</th><th>Döntetlen</th></tr></thead><tbody>${summary.players.map((p, i) => `<tr><th>${esc(seatName(i))}</th><td>${p.points}</td><td>${p.wins}</td><td>${p.draws}</td></tr>`).join('')}</tbody></table></div><p class="muted">A lezárt meccsek végső pontszámai. Újrajátszáskor tovább gyűlnek ebben a szobában.</p></details>`;
 }
 function undoHTML() {
   if (G.mode !== 'online' || mySeat() < 0) return '';
@@ -981,23 +981,23 @@ function gameHTML() {
   if (s.players.length === 2) {
     const left = G.mode === 'online' ? f : 0, right = 1 - left;
     const playerBoard = (i) => `<div class="duel-seat ${i === f ? 'mine' : ''}" data-player="${i}">${boardHTML(i, false)}</div>`;
-    return head + statusHTML() + undoHTML() + seriesHTML() + `<div class="game duel">
+    return head + statusHTML() + undoHTML() + `<div class="game duel">
       ${playerBoard(left)}
       <section class="duel-centre" aria-label="Közös középmező">${marketHTML('centre')}</section>
       ${playerBoard(right)}
       ${marketHTML('factories')}
       ${s.status === 'over' ? finalHTML() : ''}
-    </div>`;
+    </div>${s.status === 'playing' ? seriesHTML() : ''}`;
   }
   const others = s.players.map((_, i) => i).filter((i) => i !== f);
   return head + `
-  ${statusHTML()}${undoHTML()}${seriesHTML()}
+  ${statusHTML()}${undoHTML()}
   <div class="game">
     ${others.length ? `<div class="opps">${others.map((i) => boardHTML(i, true)).join('')}</div>` : ''}
     ${marketHTML()}
     <div class="mine">${boardHTML(f, false)}</div>
     ${s.status === 'over' ? finalHTML() : ''}
-  </div>`;
+  </div>${s.status === 'playing' ? seriesHTML() : ''}`;
 }
 
 function describeMove(m) {
@@ -1089,6 +1089,7 @@ function finalHTML() {
   const rows = order.map((i) => { const b = s.final[i]; return `<tr class="${s.winners.includes(i) ? 'win' : ''}"><td>${esc(seatName(i))}</td><td>${b.rows}</td><td>${b.cols}</td><td>${b.colors}</td><td>+${b.points}</td><td><b>${s.players[i].score}</b></td></tr>`; }).join('');
   return `<section class="final"><h2>${title}</h2>
     <div style="overflow-x:auto"><table><thead><tr><th>Játékos</th><th>Sorok</th><th>Oszlopok</th><th>Minták</th><th>Bónusz</th><th>Összesen</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${seriesHTML()}
     ${rematchHTML()}
     <div class="row"><button class="btn" data-act="home">${G.mode === 'online' ? 'Vissza az asztalokhoz' : 'Menü'}</button>
     ${G.mode === 'online' && G.doc?.hostId === myId ? `<button class="btn danger" data-act="remove">${removeArmed ? 'Kattints újra a törléshez' : 'Asztal törlése'}</button>` : ''}</div></section>`;
