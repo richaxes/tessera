@@ -302,6 +302,27 @@ details{padding-top:1rem}
   .game.duel>.final{grid-column:1;grid-row:auto;order:5}
 }
 
+/* Shared dark-gold details sit behind tiles and never change their slots. */
+:root{--old-gold:#8b713f}
+.board{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%20viewBox%3D%220%200%20160%20160%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%238b713f%22%20stroke-opacity%3D%22.085%22%20stroke-width%3D%221.4%22%3E%3Cpath%20d%3D%22M0%206%20C-10%20-4%20-8%20-13%20-3%20-11%20C0%20-10%200%20-6%200%20-5%20C-2%20-16%20-1%20-20%200%20-22%20C1%20-20%202%20-16%200%20-5%20C0%20-6%200%20-10%203%20-11%20C8%20-13%2010%20-4%200%206%20M-5%203%20H5%20M-4%206%20H4%22%20transform%3D%22translate%2840%2050%29%22%2F%3E%3Cpath%20d%3D%22M0%206%20C-10%20-4%20-8%20-13%20-3%20-11%20C0%20-10%200%20-6%200%20-5%20C-2%20-16%20-1%20-20%200%20-22%20C1%20-20%202%20-16%200%20-5%20C0%20-6%200%20-10%203%20-11%20C8%20-13%2010%20-4%200%206%20M-5%203%20H5%20M-4%206%20H4%22%20transform%3D%22translate%28120%20130%29%22%2F%3E%3Cpath%20d%3D%22M60%2040h40M80%2020v40M-20%20120h40M0%20100v40M140%20120h40M160%20100v40%22%20opacity%3D%22.5%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");background-size:10rem 10rem}
+.fac::before{content:"";position:absolute;inset:.15rem;border-radius:50%;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%238b713f%22%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2248%22%20stroke-width%3D%22.65%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2245.5%22%20stroke-width%3D%22.25%22%20opacity%3D%22.7%22%2F%3E%3Cpath%20d%3D%22M0%206%20C-10%20-4%20-8%20-13%20-3%20-11%20C0%20-10%200%20-6%200%20-5%20C-2%20-16%20-1%20-20%200%20-22%20C1%20-20%202%20-16%200%20-5%20C0%20-6%200%20-10%203%20-11%20C8%20-13%2010%20-4%200%206%20M-5%203%20H5%20M-4%206%20H4%22%20transform%3D%22translate%2850%2010%29%20rotate%280%29%20scale%28.28%29%22%20stroke-width%3D%221.8%22%2F%3E%3Cpath%20d%3D%22M0%206%20C-10%20-4%20-8%20-13%20-3%20-11%20C0%20-10%200%20-6%200%20-5%20C-2%20-16%20-1%20-20%200%20-22%20C1%20-20%202%20-16%200%20-5%20C0%20-6%200%20-10%203%20-11%20C8%20-13%2010%20-4%200%206%20M-5%203%20H5%20M-4%206%20H4%22%20transform%3D%22translate%2890%2050%29%20rotate%2890%29%20scale%28.28%29%22%20stroke-width%3D%221.8%22%2F%3E%3Cpath%20d%3D%22M0%206%20C-10%20-4%20-8%20-13%20-3%20-11%20C0%20-10%200%20-6%200%20-5%20C-2%20-16%20-1%20-20%200%20-22%20C1%20-20%202%20-16%200%20-5%20C0%20-6%200%20-10%203%20-11%20C8%20-13%2010%20-4%200%206%20M-5%203%20H5%20M-4%206%20H4%22%20transform%3D%22translate%2850%2090%29%20rotate%28180%29%20scale%28.28%29%22%20stroke-width%3D%221.8%22%2F%3E%3Cpath%20d%3D%22M0%206%20C-10%20-4%20-8%20-13%20-3%20-11%20C0%20-10%200%20-6%200%20-5%20C-2%20-16%20-1%20-20%200%20-22%20C1%20-20%202%20-16%200%20-5%20C0%20-6%200%20-10%203%20-11%20C8%20-13%2010%20-4%200%206%20M-5%203%20H5%20M-4%206%20H4%22%20transform%3D%22translate%2810%2050%29%20rotate%28270%29%20scale%28.28%29%22%20stroke-width%3D%221.8%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") center/100% 100% no-repeat;pointer-events:none}
+.fac>.g{position:relative;z-index:1}
+.slot,.cell:has(>.tile.ghost){box-shadow:inset 0 0 0 1px var(--old-gold);border-radius:.25rem}
+.tilebtn[draggable="true"]{cursor:grab;touch-action:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
+.tilebtn[draggable="true"]:active{cursor:grabbing}
+.drag-target{outline:1px dashed var(--brass);outline-offset:2px}
+.drag-over{outline:3px solid var(--ok)!important;background:var(--ok-soft)!important}
+.tile-drag-ghost{position:fixed;z-index:10000;transform:translate(-50%,-60%);pointer-events:none!important;opacity:.9;border:0;padding:0;background:none;filter:drop-shadow(0 .4rem .5rem #0008)}
+.tile-drag-ghost .tile{width:100%;height:100%}
+.undo-tools{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;font-size:.8rem}
+.undo-proposal{padding:1rem 1.25rem;border:1px solid var(--brass);border-radius:1rem;background:var(--brass-soft)}
+.undo-proposal p{font-size:.9rem;max-width:85ch;line-height:1.5}
+.room-series{padding:.8rem 1.1rem;border:1px solid var(--line);border-radius:1rem;background:var(--surface)}
+.room-series summary{font-weight:600;font-size:.9rem;cursor:pointer}
+.room-scores{overflow:auto}.room-scores table{width:100%;border-collapse:collapse;margin-top:.65rem;font-size:.85rem}
+.room-scores th,.room-scores td{padding:.45rem .65rem;border-bottom:1px solid var(--line);text-align:right}
+.room-scores th:first-child{text-align:left}.room-series p{font-size:.75rem;margin-bottom:0}
+
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -551,11 +572,74 @@ const Engine = (() => {
 
 </script>
 <script>
+// Shared-room history is independent of the rules engine's turn sequence.
+const RoomSeries = (() => {
+  const key = (d) => d.matchId || `legacy:${d.createdAt}`;
+  function games(d) {
+    const rows = (d.results || []).filter((r) => r && typeof r.id === 'string');
+    if (d.state?.status !== 'over' || !Array.isArray(d.state.winners) || rows.some((r) => r.id === key(d))) return rows;
+    return [...rows, { id: key(d), scores: d.state.players.map((p) => p.score), winners: [...d.state.winners] }];
+  }
+  function capture(d) { d.results = games(d); return d; }
+  function removeCurrent(d) { d.results = (d.results || []).filter((r) => r.id !== key(d)); }
+  function stats(d) {
+    const rows = games(d);
+    return { games: rows.length, players: d.seats.map((_, i) => ({
+      points: rows.reduce((n, r) => n + (r.scores[i] || 0), 0),
+      wins: rows.filter((r) => r.winners.length === 1 && r.winners[0] === i).length,
+      draws: rows.filter((r) => r.winners.length > 1 && r.winners.includes(i)).length,
+      played: rows.length,
+    })) };
+  }
+  return { capture, removeCurrent, stats, key };
+})();
+const UndoFlow = (() => {
+  const humans = (d) => d.seats.filter((s) => !s.bot && s.id).map((s) => s.id);
+  function target(d, actor) {
+    const seat = (d.seats || []).findIndex((s) => !s.bot && s.id === actor);
+    if (seat < 0) return -1;
+    for (let i = (d.undoHistory || []).length - 1; i >= 0; i--) if (d.undoHistory[i].player === seat) return i;
+    return -1;
+  }
+  function record(d, state) {
+    d.undoHistory = [...(d.undoHistory || []), { player: state.turn, state: JSON.stringify(state) }].slice(-16);
+  }
+  function ready(d) {
+    if (!humans(d).every((id) => d.undo.approvedIds.includes(id))) return d;
+    const request = d.undo, saved = JSON.parse(d.undoHistory[request.index].state);
+    saved.seq = d.state.seq + 1; // Old snapshots and drag payloads cannot replay.
+    RoomSeries.removeCurrent(d);
+    d.state = saved; d.status = saved.status; d.undoHistory = d.undoHistory.slice(0, request.index);
+    d.undo = null; d.lastUndo = { requestedBy: request.requestedBy, count: request.count, seq: saved.seq };
+    return d;
+  }
+  function request(d, actor, id, expectedSeq, expectedMatch = RoomSeries.key(d)) {
+    const index = target(d, actor);
+    if (RoomSeries.key(d) !== expectedMatch || !d.state || !['playing','over'].includes(d.status) || d.state.seq !== expectedSeq || d.undo || d.rematch || index < 0) return null;
+    d.undo = { id, fromMatch: RoomSeries.key(d), fromSeq: d.state.seq, requestedBy: actor,
+      index, count: d.undoHistory.length - index, approvedIds: [actor] };
+    return ready(d);
+  }
+  function accept(d, actor, id) {
+    const r = d.undo;
+    if (!r || r.id !== id || r.fromMatch !== RoomSeries.key(d) || r.fromSeq !== d.state?.seq
+      || !humans(d).includes(actor) || r.approvedIds.includes(actor)) return null;
+    r.approvedIds.push(actor); return ready(d);
+  }
+  function cancel(d, actor, id) {
+    if (!d.undo || d.undo.id !== id || !humans(d).includes(actor)) return null;
+    d.undo = null; return d;
+  }
+  return { record, target, request, accept, cancel };
+})();
+
 // Table-level matches are separate from the rounds inside an Azul game.
 const MatchFlow = (() => {
   const humans = (d) => d.seats.filter((s) => !s.bot && s.id).map((s) => s.id);
   const identity = (d) => d.matchId || `legacy:${d.createdAt}:${d.state?.seq}`;
   function launch(d, first, id, number, rng = Math.random) {
+    RoomSeries.capture(d);
+    d.undoHistory = []; d.undo = null; d.lastUndo = null;
     d.state = Engine.newGame(d.size, rng, first);
     d.status = 'playing';
     d.startingSeat = first;
@@ -581,7 +665,7 @@ const MatchFlow = (() => {
     return d;
   }
   function request(d, actor, id, rng = Math.random) {
-    if (d.status !== 'over' || d.state?.status !== 'over' || d.hostId !== actor || !humans(d).includes(actor) || d.rematch) return null;
+    if (d.undo || d.status !== 'over' || d.state?.status !== 'over' || d.hostId !== actor || !humans(d).includes(actor) || d.rematch) return null;
     d.rematch = { id, fromMatch: identity(d), requestedBy: actor, acceptedIds: [actor], firstSeat: nextSeat(d, rng) };
     return ready(d, rng);
   }
@@ -622,6 +706,82 @@ const app = document.getElementById('app'), overlay = document.getElementById('o
 const TAB = Math.random().toString(36).slice(2, 10);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Pointer gestures keep the same legal-move checks as click-based placement.
+function installTileDrag(root, options) {
+  const doc = root.ownerDocument || root;
+  let payload = null, pointer = null, ghost = null, blockedUntil = 0, targets = [];
+  function clear() {
+    for (const [el, disabled] of targets) { el.classList.remove('drag-target','drag-over'); el.disabled = disabled; }
+    targets = []; ghost?.remove(); ghost = null; payload = null; pointer = null;
+  }
+  function paint() {
+    for (const el of root.querySelectorAll('[data-drop-line]')) if (options.canDrop(payload, el)) {
+      targets.push([el, el.disabled]); el.disabled = false; el.classList.add('drag-target');
+    }
+  }
+  function target(el) {
+    const found = el?.closest?.('[data-drop-line]');
+    return found && payload && options.canDrop(payload, found) ? found : null;
+  }
+  function finish(el) {
+    const destination = target(el), selected = payload;
+    clear();
+    if (destination) options.play(selected, destination);
+  }
+  root.addEventListener('click', (e) => {
+    if (Date.now() < blockedUntil) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+  root.addEventListener('dragstart', (e) => {
+    if (pointer) { e.preventDefault(); return; }
+    const selected = options.source(e.target);
+    if (!selected) return;
+    clear(); payload = selected;
+    e.dataTransfer?.setData('text/plain', 'Tessera csempecsoport');
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    paint();
+  });
+  root.addEventListener('dragover', (e) => {
+    for (const [el] of targets) el.classList.remove('drag-over');
+    const to = target(e.target);
+    if (to) { e.preventDefault(); to.classList.add('drag-over'); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; }
+  });
+  root.addEventListener('drop', (e) => {
+    if (!payload) return;
+    e.preventDefault(); blockedUntil = Date.now() + 300; finish(e.target);
+  });
+  root.addEventListener('dragend', clear);
+  root.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const selected = options.source(e.target);
+    if (!selected) return;
+    clear(); pointer = { id: e.pointerId, x: e.clientX, y: e.clientY, selected, source: e.target.closest('[draggable="true"]'), active: false };
+    pointer.source?.setPointerCapture?.(e.pointerId);
+  });
+  root.addEventListener('pointermove', (e) => {
+    if (!pointer || pointer.id !== e.pointerId) return;
+    if (!pointer.active && Math.hypot(e.clientX-pointer.x, e.clientY-pointer.y) < 8) return;
+    e.preventDefault();
+    if (!pointer.active) {
+      pointer.active = true; payload = pointer.selected; paint();
+      if (pointer.source?.cloneNode) {
+        ghost = pointer.source.cloneNode(true); ghost.removeAttribute('id'); ghost.className = 'tile-drag-ghost';
+        const box = pointer.source.getBoundingClientRect(); ghost.style.width = box.width + 'px'; ghost.style.height = box.height + 'px'; doc.body.appendChild(ghost);
+      }
+    }
+    if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
+    for (const [el] of targets) el.classList.remove('drag-over');
+    target(doc.elementFromPoint(e.clientX,e.clientY))?.classList.add('drag-over');
+  }, { passive: false });
+  root.addEventListener('pointerup', (e) => {
+    if (!pointer || pointer.id !== e.pointerId) return;
+    if (!pointer.active) { clear(); return; }
+    e.preventDefault(); blockedUntil = Date.now() + 400; finish(doc.elementFromPoint(e.clientX,e.clientY));
+  });
+  root.addEventListener('pointercancel', clear);
+  root.addEventListener('keydown', (e) => { if (e.key === 'Escape') clear(); });
+  return { cancel: clear };
+}
+
 function turnBadge(active, text) {
   if (!active) return `<span class="turn-badge">${text}</span>`;
   return `<span class="turn-badge active"><svg class="turn-motif" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path class="turn-rosette" d="M24 2 30 10 40 8 38 18 46 24 38 30 40 40 30 38 24 46 18 38 8 40 10 30 2 24 10 18 8 8 18 10Z"/><path class="turn-gem" d="m24 13 11 11-11 11-11-11Z"/><circle cx="24" cy="24" r="3"/></svg><span class="turn-copy"><small>Most lép</small><strong>${text}</strong></span></span>`;
@@ -709,7 +869,7 @@ function refreshNames(ids) {
 // ---------- seats / turn helpers ----------
 function mySeat() { return G?.mode === 'online' ? G.seats.findIndex((s) => !s.bot && s.id === myId) : -1; }
 function canAct() {
-  if (!G?.state || G.state.status !== 'playing') return false;
+  if (!G?.state || G.state.status !== 'playing' || G.doc?.undo) return false;
   const t = G.state.turn, s = G.seats[t];
   if (!s || s.bot) return false;
   return G.mode === 'local' ? true : t === mySeat();
@@ -787,6 +947,20 @@ function seg(id, opts, cur) {
   return `<div class="seg" role="group">${opts.map((o) => `<button type="button" data-seg="${id}" data-val="${o}" aria-pressed="${String(o) === String(cur)}">${o}</button>`).join('')}</div>`;
 }
 
+function seriesHTML() {
+  if (G.mode !== 'online') return '';
+  const summary = RoomSeries.stats({ ...G.doc, seats: G.seats, state: G.state });
+  return `<details class="room-series" ${summary.games ? 'open' : ''}><summary>Szoba összesítője · ${summary.games} befejezett meccs</summary><div class="room-scores"><table><thead><tr><th>Játékos</th><th>Összes pont</th><th>Győzelem</th><th>Döntetlen</th></tr></thead><tbody>${summary.players.map((p, i) => `<tr><th>${esc(seatName(i))}</th><td>${p.points}</td><td>${p.wins}</td><td>${p.draws}</td></tr>`).join('')}</tbody></table></div><p class="muted">A lezárt meccsek végső pontszámai. Újrajátszáskor tovább gyűlnek ebben a szobában.</p></details>`;
+}
+function undoHTML() {
+  if (G.mode !== 'online' || mySeat() < 0) return '';
+  const d = G.doc, r = d.undo;
+  if (!r) return `<div class="undo-tools"><button class="btn sm" data-act="undo-request" ${UndoFlow.target(d, myId) < 0 || d.rematch ? 'disabled' : ''}>Előző saját lépés visszavonása</button><span class="muted">Az ellenfél jóváhagyása szükséges.</span></div>`;
+  const who = G.seats.findIndex((seat) => seat.id === r.requestedBy), own = r.requestedBy === myId;
+  const accepted = r.approvedIds.includes(myId);
+  return `<section class="undo-proposal" aria-label="Visszavonási kérelem"><b>${own ? 'Visszavonást kértél.' : esc(seatName(who)) + ' visszavonná az előző saját lépését.'}</b><p>${r.count} lépés kerül visszavonásra, az azóta megtett válaszlépésekkel együtt. A táblák, a pontok és a leosztás a kért lépés előtti állapotra állnak vissza. A játék addig szünetel.</p><div class="row">${accepted ? '<span>Várakozás a többi játékos jóváhagyására…</span>' : `<button class="btn primary" data-act="undo-accept" data-request="${esc(r.id)}">Jóváhagyom a visszavonást</button>`}<button class="btn" data-act="undo-cancel" data-request="${esc(r.id)}">${own ? 'Kérelem visszavonása' : 'Elutasítom'}</button></div></section>`;
+}
+
 function gameHTML() {
   const top = (extra) => header(extra);
   const back = `<button class="btn sm" data-act="home">← ${G.mode === 'online' ? 'Asztalok' : 'Menü'}</button>`;
@@ -799,7 +973,7 @@ function gameHTML() {
   if (s.players.length === 2) {
     const left = G.mode === 'online' ? f : 0, right = 1 - left;
     const playerBoard = (i) => `<div class="duel-seat ${i === f ? 'mine' : ''}" data-player="${i}">${boardHTML(i, false)}</div>`;
-    return head + statusHTML() + `<div class="game duel">
+    return head + statusHTML() + undoHTML() + seriesHTML() + `<div class="game duel">
       ${playerBoard(left)}
       <section class="duel-centre" aria-label="Közös középmező">${marketHTML('centre')}</section>
       ${playerBoard(right)}
@@ -809,7 +983,7 @@ function gameHTML() {
   }
   const others = s.players.map((_, i) => i).filter((i) => i !== f);
   return head + `
-  ${statusHTML()}
+  ${statusHTML()}${undoHTML()}${seriesHTML()}
   <div class="game">
     ${others.length ? `<div class="opps">${others.map((i) => boardHTML(i, true)).join('')}</div>` : ''}
     ${marketHTML()}
@@ -827,6 +1001,7 @@ function describeMove(m) {
 
 function statusHTML() {
   const s = G.state;
+  if (G.doc?.undo) return `<div class="status"><b>A játék szünetel: visszavonás jóváhagyására várunk.</b></div>`;
   if (s.status === 'over') return `<div class="status"><b>Vége a játéknak.</b><span class="grow"></span></div>`;
   const t = s.turn, me = canAct();
   let msg;
@@ -849,7 +1024,7 @@ function marketHTML(part = 'all') {
   const lm = s.lastMove;
   const btn = (src, c) => {
     const isSel = sel && sel.src === src && sel.color === c;
-    return `<button class="tilebtn ${isSel ? 'sel' : ''}" data-act="pick" data-src="${src}" data-color="${c}" ${act ? '' : 'disabled'} aria-label="${NAMES[c]} csempék elvétele: ${src === 'c' ? 'közép' : (src + 1) + '. kínálótálca'}">${tileSvg(c)}</button>`;
+    return `<button class="tilebtn ${isSel ? 'sel' : ''}" draggable="${act}" data-act="pick" data-src="${src}" data-color="${c}" ${act ? '' : 'disabled'} aria-label="${NAMES[c]} csempék elvétele: ${src === 'c' ? 'közép' : (src + 1) + '. kínálótálca'}">${tileSvg(c)}</button>`;
   };
   const facs = s.factories.map((f, i) => `<div class="fac ${lm && lm.src === i ? 'recent' : ''}"><span class="n">${i + 1}</span>${f.length ? `<div class="g">${f.map((c) => btn(i, c)).join('')}</div>` : ''}</div>`).join('');
   const groups = [0, 1, 2, 3, 4].map((c) => { const n = s.center.filter((x) => x === c).length; return n ? `<div class="grp">${Array(n).fill(0).map(() => btn('c', c)).join('')}</div>` : ''; }).join('');
@@ -870,7 +1045,7 @@ function boardHTML(pi, compact) {
       const filled = k >= r + 1 - L.n;
       return filled ? tileSvg(L.color) : `<span class="slot"></span>`;
     }).join('');
-    return `<button class="line ${ok ? 'ok' : ''}" ${ok ? `data-act="place" data-line="${r}"` : 'disabled tabindex="-1"'} aria-label="${r + 1}. mintasor">${slots}</button>`;
+    return `<button class="line ${ok ? 'ok' : ''}" data-drop-player="${pi}" data-drop-line="${r}" ${ok ? `data-act="place" data-line="${r}"` : 'disabled tabindex="-1"'} aria-label="${r + 1}. mintasor">${slots}</button>`;
   }).join('');
   const wall = p.wall.map((row, r) => row.map((on, c) => {
     const color = Engine.wallColor(r, c);
@@ -878,13 +1053,13 @@ function boardHTML(pi, compact) {
     return `<div class="cell ${isFresh ? 'fresh' : ''}">${tileSvg(color, on ? '' : 'ghost')}</div>`;
   }).join('')).join('');
   const fl = Engine.FLOOR.map((pen, k) => `<span class="fs">${k < p.floor.length ? tileSvg(p.floor[k]) : '<span class="slot"></span>'}<i>−${pen}</i></span>`).join('');
-  const turn = s.status === 'playing' && s.turn === pi;
+  const turn = s.status === 'playing' && s.turn === pi && !G.doc?.undo;
   const mine = G.mode === 'online' ? isMe(pi) : !G.seats[pi].bot;
   const badge = turnBadge(turn, turn ? (mine ? 'Te következel' : 'Ő következik') : s.status === 'over' ? 'Játék vége' : 'Várakozik');
   return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" aria-label="${esc(seatName(pi))} táblája">
     <div class="bhead"><div class="player-label"><span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span>${badge}</div><span class="sc num">${p.score}</span></div>
     <div class="bgrid"><div class="lines">${lines}</div><div class="wall">${wall}</div></div>
-    <button class="floor ${active ? 'ok' : ''}" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Padlósor">${fl}</button>
+    <button class="floor ${active ? 'ok' : ''}" data-drop-player="${pi}" data-drop-line="-1" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Padlósor">${fl}</button>
   </section>`;
 }
 
@@ -953,12 +1128,12 @@ function afterState(prevRound) {
     clearTimeout(bannerTimer); bannerTimer = setTimeout(() => { bannerFor = 'x'; renderOverlays(); }, 6500);
   }
   if (sel) { const ok = Engine.legalMoves(s).some((m) => m.src === sel.src && m.color === sel.color); if (!ok || !canAct()) sel = null; }
-  scheduleBot();
+  if (G.doc?.undo) { sel = null; clearTimeout(botTimer); botTimer = null; } else scheduleBot();
 }
 
 function scheduleBot() {
   const s = G?.state;
-  if (botTimer || !s || s.status !== 'playing' || !G.seats[s.turn]?.bot) return;
+  if (G.doc?.undo || botTimer || !s || s.status !== 'playing' || !G.seats[s.turn]?.bot) return;
   if (G.mode === 'online' && mySeat() < 0) return;
   const seq = s.seq;
   const matchId = G.doc?.matchId;
@@ -970,9 +1145,10 @@ function scheduleBot() {
       afterState(); render();
     } else {
       await commit((d) => {
-        if (d.matchId !== matchId || !d.state || d.state.seq !== seq || d.status !== 'playing' || !d.seats[d.state.turn]?.bot) return null;
+        if (d.undo || d.matchId !== matchId || !d.state || d.state.seq !== seq || d.status !== 'playing' || !d.seats[d.state.turn]?.bot) return null;
+        UndoFlow.record(d, d.state);
         d.state = Engine.applyMove(d.state, Engine.botMove(d.state));
-        d.status = d.state.status === 'over' ? 'over' : 'playing';
+        d.status = d.state.status === 'over' ? 'over' : 'playing'; RoomSeries.capture(d);
         return d;
       }, true);
     }
@@ -990,11 +1166,12 @@ async function doMove(line) {
   if (G.mode === 'online') {
     const me = mySeat();
     const ok = await commit((d) => {
-      if (d.matchId !== matchId || !d.state || d.state.seq !== prev.seq || d.state.turn !== me) return null;
-      d.state = next; d.status = next.status === 'over' ? 'over' : 'playing';
+      if (d.undo || d.matchId !== matchId || !d.state || d.state.seq !== prev.seq || d.state.turn !== me) return null;
+      UndoFlow.record(d, d.state);
+      d.state = next; d.status = next.status === 'over' ? 'over' : 'playing'; RoomSeries.capture(d);
       return d;
     });
-    if (!ok) { toast('Nem sikerült menteni a lépést. Nyisd meg újra az asztalt a mentett állapot betöltéséhez!'); }
+    if (!ok) { if (G?.doc?.matchId === matchId && G.state.seq === next.seq) { G.state = prev; afterState(); render(); } toast('Nem sikerült menteni a lépést. Nyisd meg újra az asztalt a mentett állapot betöltéséhez!'); }
   }
 }
 
@@ -1130,6 +1307,17 @@ function startLocal() {
 function goHome() { unsubGame?.(); unsubGame = null; clearTimeout(botTimer); botTimer = null; view = 'home'; G = null; sel = null; removeArmed = false; render(); }
 
 // ---------- events ----------
+installTileDrag(app, {
+  source: (el) => {
+    const b = el.closest('[data-act="pick"]');
+    if (!b || !canAct()) return null;
+    return { src: b.dataset.src === 'c' ? 'c' : +b.dataset.src, color: +b.dataset.color, seq: G.state.seq, match: G.doc?.matchId || G.matchId };
+  },
+  canDrop: (p, el) => canAct() && p.seq === G.state.seq && p.match === (G.doc?.matchId || G.matchId)
+    && +el.dataset.dropPlayer === G.state.turn && Engine.legalMoves(G.state).some((m) => m.src === p.src && m.color === p.color && m.line === +el.dataset.dropLine),
+  play: (p, el) => { sel = { src: p.src, color: p.color }; doMove(+el.dataset.dropLine); },
+});
+
 app.addEventListener('click', async (e) => {
   const segb = e.target.closest('[data-seg]');
   if (segb) {
@@ -1165,7 +1353,11 @@ app.addEventListener('click', async (e) => {
       try { await navigator.clipboard.writeText(code); toast(`Kimásolva: ${code}`); } catch { toast(`Asztalkód: ${code}`); }
       break;
     }
+    case 'undo-request': { const seq = G.state.seq, match = RoomSeries.key(G.doc), id = newMatchId(); await commit((d) => UndoFlow.request(d, myId, id, seq, match)); break; }
+    case 'undo-accept': await commit((d) => UndoFlow.accept(d, myId, b.dataset.request)); break;
+    case 'undo-cancel': await commit((d) => UndoFlow.cancel(d, myId, b.dataset.request)); break;
     case 'pick': {
+      if (!canAct()) break;
       const src = b.dataset.src === 'c' ? 'c' : +b.dataset.src, color = +b.dataset.color;
       sel = sel && sel.src === src && sel.color === color ? null : { src, color };
       render(); break;
