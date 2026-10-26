@@ -358,6 +358,9 @@ details{padding-top:1rem}
 .chat-form textarea{min-width:0;width:100%;height:4.2rem;resize:none;border:1px solid #7e8c7966;border-radius:.6rem;background:#0d1d1f;color:#e7eeeb;padding:.6rem;font:inherit;font-size:16px;line-height:1.4}
 .chat-form textarea:focus-visible{outline:2px solid #d9b965;outline-offset:1px}.chat-form .btn{min-height:2.75rem;font-size:.84rem;padding:.55rem .65rem}
 .chat-help{grid-column:1/-1;font-size:.7rem;color:#a8b9b5;display:flex;justify-content:space-between;gap:.5rem}.chat-status{color:#e5cb91}
+.chat-composer-tools,.chat-emojis{grid-column:1/-1}.chat-emoji-toggle{font:inherit;font-size:.8rem;background:#203639;color:#eee4c9;border:1px solid #a88a4e55;border-radius:.5rem;padding:.3rem .6rem;cursor:pointer}
+.chat-emojis{display:grid;grid-template-columns:repeat(9,1fr);gap:.15rem;background:#203639;border-radius:.6rem;padding:.35rem}.chat-emojis[hidden]{display:none}
+.chat-emojis button{border:0;border-radius:.4rem;background:transparent;cursor:pointer;font-size:1.3rem;padding:.25rem;line-height:1.3}.chat-emojis button:hover,.chat-emojis button:focus-visible{background:#b68c3d55;outline:1px solid #d9b965}
 @media(max-width:600px){.room-chat{right:.6rem;bottom:.6rem;width:min(23rem,calc(100vw - 1.2rem))}.chat-log{height:min(17rem,35dvh)}}
 </style>
 <style id="tile-skins-style">
@@ -365,6 +368,25 @@ details{padding-top:1rem}
 .skin-setting select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:.7rem;padding:.55rem .7rem;min-height:2.5rem;max-width:15rem;cursor:pointer}
 .skin-setting select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 @media(max-width:600px){.skin-setting{font-size:.78rem}.skin-setting select{max-width:13rem;padding:.45rem .55rem}}
+</style>
+<style id="tablecloth-style">
+/* One reference texture, six textile dyes. Tiles themselves are never filtered. */
+[data-cloth="ivory"]{--cloth-base:#f7f3e9;--cloth-ink:#493e2c;--cloth-muted:#817156;--cloth-gold:#9c7837;--cloth-ok:#2c7954}
+[data-cloth="ruby"]{--cloth-base:#75172a;--cloth-ink:#fff2d4;--cloth-muted:#edd5c0;--cloth-gold:#e8c77a;--cloth-ok:#ffe1a1}
+[data-cloth="emerald"]{--cloth-base:#175a40;--cloth-ink:#f6f3dc;--cloth-muted:#d3e0cf;--cloth-gold:#dfd6af;--cloth-ok:#f7e6a6}
+[data-cloth="sapphire"]{--cloth-base:#1c3d6b;--cloth-ink:#fff0d6;--cloth-muted:#d3d9df;--cloth-gold:#e7bd7a;--cloth-ok:#f8d68c}
+[data-cloth="honey"]{--cloth-base:#e5b54d;--cloth-ink:#392d1b;--cloth-muted:#6c5128;--cloth-gold:#79561e;--cloth-ok:#255b3b}
+[data-cloth="lavender"]{--cloth-base:#b1a6d3;--cloth-ink:#363047;--cloth-muted:#655b77;--cloth-gold:#69527f;--cloth-ok:#355b40}
+.board[data-cloth],.game[data-cloth] .centre,.game[data-cloth] .fac{--ink:var(--cloth-ink);--muted:var(--cloth-muted);--brass:var(--cloth-gold);--ok:var(--cloth-ok);color:var(--ink);background-color:var(--cloth-base);background-blend-mode:soft-light,multiply}
+.board[data-cloth="ivory"],.game[data-cloth="ivory"] .centre,.game[data-cloth="ivory"] .fac{background-blend-mode:normal}
+.board[data-cloth] .slot{background:#eee7d8b8}
+.board[data-cloth] .turn-badge:not(.active){background:#ffffff1a;color:var(--muted)}
+.board[data-cloth] .turn-badge.active{color:var(--ink);background:#ffffff12;border-color:var(--cloth-gold)}
+.board[data-cloth] .turn-copy small,.board[data-cloth] .turn-copy strong{color:var(--ink)}
+.board[data-cloth] .floor i{color:var(--muted)}
+.house-badge{display:inline-flex;gap:.3rem;align-items:center;color:var(--cloth-ink,var(--ink));font-size:.72rem;font-weight:600;line-height:1.2}
+.house-badge>span{font-size:.95rem}.board:has(.house-badge) .bhead{min-height:7rem}
+.cloth-setting select{max-width:14rem}
 </style>
 </head>
 <body>
@@ -750,6 +772,16 @@ const RoomChat = (() => {
   }
   return { append, messages, unread, text, MAX_LENGTH, LIMIT };
 })();
+const ChatEmoji = (() => {
+  const choices = [
+    ['😊','Mosoly'],['😂','Nevetés'],['😅','Húha'],['🤔','Gondolkodom'],['😭','Sírás'],['❤️','Szív'],['👍','Tetszik'],['👏','Taps'],['🎉','Ünneplés'],['🏆','Trófea'],['✨','Csillogás'],['🪄','Varázspálca'],['🦁','Oroszlán'],['🐍','Kígyó'],['🐦‍⬛','Holló'],['🦡','Borz'],['👻','Szellem'],['🍀','Sok szerencsét'],
+  ];
+  function insert(text, emoji, start, end, limit = 500) {
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    return next.length <= limit ? { text: next, caret: start + emoji.length } : null;
+  }
+  return { choices, insert };
+})();
 // ROOM CHAT FLOW END
 // TILE SKINS START
 // Pattern IDs belong to the rules engine; a skin changes their local presentation only.
@@ -777,6 +809,43 @@ const TileSkins = (() => {
   return { names, select, restore, symbol, picker, current: () => current };
 })();
 // TILE SKINS END
+// TABLECLOTHS START
+// Cosmetic choices never consume the rules engine's random stream.
+const Tablecloths = (() => {
+  const fabrics = { auto: 'Automatikus', ivory: 'Drapp · arany', ruby: 'Bordó · arany', emerald: 'Smaragd · ezüst', sapphire: 'Éjkék · bronz', honey: 'Mézsárga · fekete', lavender: 'Levendula · ezüst' };
+  const houses = [
+    { name: 'Oroszlánház', icon: '🦁', cloth: 'ruby' },
+    { name: 'Kígyóház', icon: '🐍', cloth: 'emerald' },
+    { name: 'Hollóház', icon: '🐦‍⬛', cloth: 'sapphire' },
+    { name: 'Borzház', icon: '🦡', cloth: 'honey' },
+  ];
+  let current = 'auto';
+  const valid = (value) => Object.hasOwn(fabrics, value) ? value : 'auto';
+  function select(value) { current = valid(value); try { localStorage.setItem('tessera.tablecloth', current); } catch {} return current; }
+  function restore() { let saved; try { saved = localStorage.getItem('tessera.tablecloth'); } catch {} return select(saved); }
+  function assignment(match) {
+    // A randomly generated match identity gives every client the same shuffled houses.
+    let seed = 2166136261;
+    for (const c of String(match)) seed = Math.imul(seed ^ c.charCodeAt(0), 16777619) >>> 0;
+    const random = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const order = [0, 1, 2, 3];
+    for (let i = 3; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    return order.map((i) => houses[i]);
+  }
+  function house(match, seat) { return assignment(match)[seat % 4]; }
+  function cloth(choice, skin, match, seat) { choice = valid(choice); return choice !== 'auto' ? choice : skin === 'wizard' ? house(match, seat).cloth : 'ivory'; }
+  function badge(skin, match, seat) {
+    if (skin !== 'wizard') return '';
+    const h = house(match, seat);
+    return `<span class="house-badge" title="A meccsre kisorsolt házad"><span aria-hidden="true">${h.icon}</span> ${h.name}</span>`;
+  }
+  function picker(choice = current, skin = 'classic') {
+    choice = valid(choice);
+    return `<label class="skin-setting cloth-setting">Terítő <select id="tablecloth" aria-label="Terítő" title="Játék közben is választhatsz. Az automatikus terítő a Varázsiskola szettnél a kisorsolt ház színe.">${Object.entries(fabrics).map(([id, label]) => `<option value="${id}"${choice === id ? ' selected' : ''}>${id === 'auto' ? skin === 'wizard' ? 'Automatikus · házszín' : 'Automatikus · drapp' : label}</option>`).join('')}</select></label>`;
+  }
+  return { select, restore, cloth, badge, picker, house, assignment, current: () => current };
+})();
+// TABLECLOTHS END
 const TurnCues = {
   create() {
     let last = null;
@@ -796,6 +865,7 @@ const TurnCues = {
 (() => {
 const NAMES = TileSkins.names;
 TileSkins.restore();
+Tablecloths.restore();
 const NAMES_PL = NAMES;
 const app = document.getElementById('app'), overlay = document.getElementById('overlay');
 const TAB = Math.random().toString(36).slice(2, 10);
@@ -987,9 +1057,20 @@ function render() {
   notifyTurn();
 }
 
+function clothKey() { return G?.doc?.matchId || G?.matchId || 'room:' + (G?.doc?.createdAt || G?.code || 'home'); }
+function clothChoice(pi = mySeat()) { return G?.mode === 'online' ? G.seats[pi]?.cloth || 'auto' : pi === 0 ? Tablecloths.current() : 'auto'; }
+function clothFor(pi) { return Tablecloths.cloth(clothChoice(pi), TileSkins.current(), clothKey(), pi); }
+async function changeCloth(value) {
+  const code = G?.code;
+  if (G?.mode === 'online' && mySeat() >= 0) {
+    const ok = await commit((d) => { const seat = d.seats.find((s) => !s.bot && s.id === myId); if (!seat) return null; seat.cloth = value; return d; }, true, code);
+    if (!ok) { toast('Nem sikerült menteni a terítőt. Próbáld újra!'); render(); return; }
+  }
+  Tablecloths.select(value); render(); document.getElementById('tablecloth')?.focus();
+}
 function header(extra = '') {
   const sound = view === 'game' ? `<button class="btn sm sound-toggle" data-act="sound" aria-pressed="${soundEnabled}" title="Hangjelzés minden saját kör elején. Az első kattintás engedélyezi a hangot.">Hang: ${soundEnabled ? 'be' : 'ki'}</button>` : '';
-  return `<header class="top"><div class="mark">${tileSvg(2)}<span>Tessera</span></div><div class="grow"></div>${TileSkins.picker()}${sound}${extra}</header>`;
+  return `<header class="top"><div class="mark">${tileSvg(2)}<span>Tessera</span></div><div class="grow"></div>${TileSkins.picker()}${Tablecloths.picker(G?.mode === 'online' ? clothChoice() : Tablecloths.current(), TileSkins.current())}${sound}${extra}</header>`;
 }
 
 function homeHTML() {
@@ -1069,7 +1150,7 @@ function gameHTML() {
   if (s.players.length === 2) {
     const left = G.mode === 'online' ? f : 0, right = 1 - left;
     const playerBoard = (i) => `<div class="duel-seat ${i === f ? 'mine' : ''}" data-player="${i}">${boardHTML(i, false)}</div>`;
-    return head + statusHTML() + undoHTML() + `<div class="game duel">
+    return head + statusHTML() + undoHTML() + `<div class="game duel" data-cloth="${clothFor(f)}">
       ${playerBoard(left)}
       <section class="duel-centre" aria-label="Közös középmező">${marketHTML('centre')}</section>
       ${playerBoard(right)}
@@ -1080,7 +1161,7 @@ function gameHTML() {
   const others = s.players.map((_, i) => i).filter((i) => i !== f);
   return head + `
   ${statusHTML()}${undoHTML()}
-  <div class="game">
+  <div class="game" data-cloth="${clothFor(f)}">
     ${others.length ? `<div class="opps">${others.map((i) => boardHTML(i, true)).join('')}</div>` : ''}
     ${marketHTML()}
     <div class="mine">${boardHTML(f, false)}</div>
@@ -1152,8 +1233,8 @@ function boardHTML(pi, compact) {
   const turn = s.status === 'playing' && s.turn === pi && !G.doc?.undo;
   const mine = G.mode === 'online' ? isMe(pi) : !G.seats[pi].bot;
   const badge = turnBadge(turn, turn ? (mine ? 'Te következel' : 'Ő következik') : s.status === 'over' ? 'Játék vége' : 'Várakozik');
-  return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" aria-label="${esc(seatName(pi))} táblája">
-    <div class="bhead"><div class="player-label"><span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span>${badge}</div><span class="sc num">${p.score}</span></div>
+  return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" data-cloth="${clothFor(pi)}" data-cloth="${clothFor(pi)}" data-cloth="${clothFor(pi)}" aria-label="${esc(seatName(pi))} táblája">
+    <div class="bhead"><div class="player-label"><span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span>${badge}${Tablecloths.badge(TileSkins.current(), clothKey(), pi)}</div><span class="sc num">${p.score}</span></div>
     <div class="bgrid"><div class="lines">${lines}</div><div class="wall">${wall}</div></div>
     <button class="floor ${active ? 'ok' : ''}" data-drop-player="${pi}" data-drop-line="-1" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Padlósor">${fl}</button>
   </section>`;
@@ -1326,7 +1407,7 @@ async function createTable() {
   try {
     for (let i = 0; i < 3 && (await db.doc('games/' + code).get()).exists; i++) code = genCode();
     const now = Date.now();
-    await db.doc('games/' + code).set({ code, status: 'lobby', hostId: myId, size: onlineSize, private: onlinePrivate, seats: [{ id: myId, nick, bot: false }], playerIds: [myId], createdAt: now, updatedAt: now, state: null });
+    await db.doc('games/' + code).set({ code, status: 'lobby', hostId: myId, size: onlineSize, private: onlinePrivate, seats: [{ id: myId, nick, bot: false, cloth: Tablecloths.current() }], playerIds: [myId], createdAt: now, updatedAt: now, state: null });
     openTable(code);
   } catch (e) {
     console.warn(e); toast(e?.code === 'permission-denied' ? 'A szerver nem engedélyezte az asztal létrehozását. Ellenőrizd a Firestore hozzáférési szabályait!' : 'Nem sikerült létrehozni az asztalt (' + (e?.code || e?.message || 'ismeretlen hiba') + ').');
@@ -1365,7 +1446,7 @@ async function sit(code) {
   const ok = await commit((d) => {
     if ((d.playerIds || []).includes(myId)) return d;
     if (d.status !== 'lobby' || d.seats.length >= d.size) return null;
-    d.seats.push({ id: myId, nick, bot: false }); d.playerIds = [...(d.playerIds || []), myId];
+    d.seats.push({ id: myId, nick, bot: false, cloth: Tablecloths.current() }); d.playerIds = [...(d.playerIds || []), myId];
     return d;
   }, false, code);
   return ok;
@@ -1413,7 +1494,7 @@ chatRoot.className = 'room-chat'; chatRoot.hidden = true; chatRoot.setAttribute(
 chatRoot.innerHTML = `<section class="chat-window" id="room-chat-window" aria-label="Beszélgetés a szobában" hidden>
   <div class="chat-head"><div><strong>Szobachat</strong><small class="chat-room-label"></small></div><button type="button" class="chat-close" aria-label="Chat összecsukása">×</button></div>
   <div class="chat-log" role="log" aria-live="polite" aria-relevant="additions" aria-label="Üzenetek"></div>
-  <form class="chat-form"><textarea aria-label="Üzenet a másik játékosnak" maxlength="500" placeholder="Írj a játékostársadnak…"></textarea><button type="submit" class="btn primary">Küldés</button><div class="chat-help"><span class="chat-status">Enter: küldés · Shift+Enter: új sor</span><span class="chat-count">0 / 500</span></div></form>
+  <form class="chat-form"><div class="chat-composer-tools"><button type="button" class="chat-emoji-toggle" aria-label="Emojik" aria-expanded="false" aria-controls="chat-emoji-palette">😊 Emoji</button></div><div class="chat-emojis" id="chat-emoji-palette" role="group" aria-label="Választható emojik" hidden>${ChatEmoji.choices.map(([icon, label], i) => `<button type="button" data-emoji="${i}" aria-label="${label}" title="${label}">${icon}</button>`).join('')}</div><textarea aria-label="Üzenet a másik játékosnak" maxlength="500" placeholder="Írj a játékostársadnak…"></textarea><button type="submit" class="btn primary">Küldés</button><div class="chat-help"><span class="chat-status">Enter: küldés · Shift+Enter: új sor</span><span class="chat-count">0 / 500</span></div></form>
 </section><button type="button" class="chat-toggle" aria-controls="room-chat-window" aria-expanded="false"><svg class="chat-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6 4V4a1 1 0 0 1 1-1Z"/><path d="M7 8h10M7 12h7"/></svg><span>Szobachat</span><span class="chat-unread"></span></button>`;
 document.body.appendChild(chatRoot);
 const chatRooms = new Map(), chatInput = chatRoot.querySelector('textarea'), chatLog = chatRoot.querySelector('.chat-log');
@@ -1421,7 +1502,7 @@ let chatRoomKey = '', chatListKey = '';
 function activeChat() {
   if (view !== 'game' || G?.mode !== 'online' || !G.doc || mySeat() < 0) return null;
   const key = `${G.code}:${G.doc.createdAt}:${myId}`;
-  if (!chatRooms.has(key)) chatRooms.set(key, { open: false, draft: '', sending: false, seen: store.get('chat-seen.' + key, '') });
+  if (!chatRooms.has(key)) chatRooms.set(key, { open: false, emojiOpen: false, draft: '', sending: false, seen: store.get('chat-seen.' + key, '') });
   return { key, state: chatRooms.get(key), doc: G.doc, code: G.code };
 }
 function markChatSeen(c) {
@@ -1440,6 +1521,8 @@ function renderChat() {
     if (bottom || switched || rows.at(-1)?.sender === myId) chatLog.scrollTop = chatLog.scrollHeight;
   }
   chatRoot.querySelector('.chat-window').hidden = !c.state.open;
+  chatRoot.querySelector('.chat-emojis').hidden = !c.state.emojiOpen;
+  chatRoot.querySelector('.chat-emoji-toggle').setAttribute('aria-expanded', String(!!c.state.emojiOpen));
   if (c.state.open && !document.hidden && (bottom || switched)) markChatSeen(c);
   const unread = RoomChat.unread(c.doc, myId, c.state.seen), toggle = chatRoot.querySelector('.chat-toggle');
   toggle.setAttribute('aria-expanded', String(c.state.open));
@@ -1459,10 +1542,20 @@ function toggleChat(open) {
 }
 chatRoot.querySelector('.chat-toggle').addEventListener('click', () => { const c = activeChat(); if (c) toggleChat(!c.state.open); });
 chatRoot.querySelector('.chat-close').addEventListener('click', () => toggleChat(false));
+chatRoot.querySelector('.chat-emoji-toggle').addEventListener('click', () => { const c = activeChat(); if (c) { c.state.emojiOpen = !c.state.emojiOpen; renderChat(); } });
+chatRoot.querySelector('.chat-emojis').addEventListener('click', (e) => {
+  const button = e.target.closest('[data-emoji]'), c = activeChat();
+  if (!button || !c) return;
+  const emoji = ChatEmoji.choices[Number(button.dataset.emoji)]?.[0]; if (!emoji) return;
+  const inserted = ChatEmoji.insert(chatInput.value, emoji, chatInput.selectionStart, chatInput.selectionEnd, RoomChat.MAX_LENGTH);
+  if (!inserted) { toast('Ez az emoji már nem fér az 500 karakteres üzenetbe.'); return; }
+  chatInput.value = c.state.draft = inserted.text; c.state.emojiOpen = false;
+  renderChat(); chatInput.focus(); chatInput.setSelectionRange(inserted.caret, inserted.caret);
+});
 chatInput.addEventListener('input', () => { const c = activeChat(); if (c) { c.state.draft = chatInput.value; renderChat(); } });
 chatInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); chatRoot.querySelector('form').requestSubmit(); }
-  if (e.key === 'Escape') { e.stopPropagation(); toggleChat(false); }
+  if (e.key === 'Escape') { e.stopPropagation(); const c = activeChat(); if (c?.state.emojiOpen) { c.state.emojiOpen = false; renderChat(); } else toggleChat(false); }
 });
 chatLog.addEventListener('scroll', () => {
   const c = activeChat(); if (c?.state.open && !document.hidden && chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40) { markChatSeen(c); renderChat(); }
@@ -1559,7 +1652,7 @@ app.addEventListener('input', (e) => {
   if (t.id === 'nick') { nick = t.value.trim(); store.set('nick', nick); }
   if (t.dataset.seat != null) { localSetup.seats[+t.dataset.seat].nick = t.value; store.set('local', localSetup); }
 });
-app.addEventListener('change', (e) => { if (e.target.id === 'tile-skin') { TileSkins.select(e.target.value); render(); document.getElementById('tile-skin')?.focus(); } if (e.target.id === 'opriv') onlinePrivate = e.target.checked; });
+app.addEventListener('change', (e) => { if (e.target.id === 'tablecloth') { changeCloth(e.target.value); return; } if (e.target.id === 'tile-skin') { TileSkins.select(e.target.value); render(); document.getElementById('tile-skin')?.focus(); } if (e.target.id === 'opriv') onlinePrivate = e.target.checked; });
 app.addEventListener('keydown', (e) => { if (e.target.id === 'joincode' && e.key === 'Enter') joinByCode(e.target.value); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sel) { sel = null; render(); } });
 
