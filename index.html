@@ -336,6 +336,30 @@ details{padding-top:1rem}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
+<style id="room-chat-style">
+/* A separate root keeps a draft and its focus intact when the game redraws. */
+.room-chat{position:fixed;right:1.2rem;bottom:1.1rem;z-index:35;width:min(23rem,calc(100vw - 2rem));font-size:.94rem}
+.room-chat[hidden],.chat-window[hidden]{display:none}
+.chat-toggle{display:flex;align-items:center;gap:.65rem;margin-left:auto;border:1px solid #b68c3d;background:#18312f;box-shadow:0 .35rem 1.5rem #0005;color:#f7edda;border-radius:2rem;padding:.75rem 1.1rem;cursor:pointer;font:inherit}
+.chat-icon{width:1.25rem;height:1.25rem;fill:none;stroke:currentColor;stroke-width:1.6}
+.chat-unread{background:#e0bb66;color:#172a27;border-radius:1rem;min-width:1.5rem;text-align:center;font-weight:700;padding:.05rem .35rem}
+.chat-unread:empty{display:none}
+.chat-window{margin-bottom:.65rem;border:1px solid #a88a4e;border-radius:1rem;background:#102224;box-shadow:0 .6rem 2.5rem #0007;overflow:hidden;color:#e7eeeb}
+.chat-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 1rem;border-bottom:1px solid #a88a4e55;background:#18312f}
+.chat-head strong{color:#e7ce92}.chat-head small{display:block;color:#a8b9b5;font-size:.75rem;margin-top:.15rem}
+.chat-close{border:0;background:transparent;color:#ded8c7;font-size:1.5rem;cursor:pointer;padding:.1rem .4rem}
+.chat-log{height:min(19rem,40dvh);overflow-y:auto;overscroll-behavior:contain;padding:.8rem;display:flex;flex-direction:column;gap:.65rem;scrollbar-width:thin}
+.chat-empty{color:#a8b9b5;text-align:center;margin:auto;font-size:.9rem;line-height:1.6}
+.chat-message{max-width:92%;align-self:flex-start;background:#203639;border:1px solid #ffffff0d;border-radius:.75rem .75rem .75rem .15rem;padding:.5rem .7rem;overflow-wrap:anywhere}
+.chat-message.own{align-self:flex-end;background:#294238;border-color:#b69b5640;border-radius:.75rem .75rem .15rem .75rem}
+.chat-meta{display:flex;align-items:baseline;gap:.7rem;font-size:.73rem;color:#d8c18b}.chat-meta time{margin-left:auto;color:#9fb1ab;font-variant-numeric:tabular-nums}
+.chat-message p{white-space:pre-wrap;margin:.25rem 0 0;line-height:1.45;font-size:.93rem}
+.chat-form{padding:.75rem;border-top:1px solid #a88a4e44;display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:end}
+.chat-form textarea{min-width:0;width:100%;height:4.2rem;resize:none;border:1px solid #7e8c7966;border-radius:.6rem;background:#0d1d1f;color:#e7eeeb;padding:.6rem;font:inherit;font-size:16px;line-height:1.4}
+.chat-form textarea:focus-visible{outline:2px solid #d9b965;outline-offset:1px}.chat-form .btn{min-height:2.75rem;font-size:.84rem;padding:.55rem .65rem}
+.chat-help{grid-column:1/-1;font-size:.7rem;color:#a8b9b5;display:flex;justify-content:space-between;gap:.5rem}.chat-status{color:#e5cb91}
+@media(max-width:600px){.room-chat{right:.6rem;bottom:.6rem;width:min(23rem,calc(100vw - 1.2rem))}.chat-log{height:min(17rem,35dvh)}}
+</style>
 </head>
 <body>
 
@@ -691,6 +715,29 @@ const MatchFlow = (() => {
   return { first, request, accept, cancel, nextSeat };
 })();
 
+// ROOM CHAT FLOW START
+// Room messages share the game's transaction, so simultaneous moves never overwrite them.
+const RoomChat = (() => {
+  const LIMIT = 80, MAX_LENGTH = 500;
+  const text = (value) => typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : '';
+  const messages = (d) => (Array.isArray(d?.chat) ? d.chat : []).filter((m) =>
+    m && typeof m.id === 'string' && typeof m.sender === 'string' && typeof m.text === 'string').slice(-LIMIT);
+  function append(d, actor, id, value, at = Date.now()) {
+    const body = text(value);
+    if (!d.seats?.some((s) => !s.bot && s.id === actor) || !id || !body || body.length > MAX_LENGTH) return null;
+    const rows = messages(d);
+    if (rows.some((m) => m.id === id)) return d; // Transaction retries keep the same message identity.
+    const seat = d.seats.find((s) => !s.bot && s.id === actor);
+    d.chat = [...rows, { id, sender: actor, nick: (seat.nick || 'Játékos').slice(0, 18), text: body, at }].slice(-LIMIT);
+    return d;
+  }
+  function unread(d, actor, seen) {
+    const rows = messages(d), index = rows.findIndex((m) => m.id === seen);
+    return rows.slice(index + 1).filter((m) => m.sender !== actor).length;
+  }
+  return { append, messages, unread, text, MAX_LENGTH, LIMIT };
+})();
+// ROOM CHAT FLOW END
 const TurnCues = {
   create() {
     let last = null;
@@ -896,6 +943,7 @@ function render() {
   if (view === 'home') app.innerHTML = homeHTML();
   else app.innerHTML = gameHTML();
   renderOverlays();
+  renderChat();
   notifyTurn();
 }
 
@@ -1256,6 +1304,9 @@ function openTable(code) {
     if (!G || G.code !== code) return;
     if (!snap.exists) { if (!snap.metadata.fromCache) { toast(`A(z) ${code} kódú asztal nem létezik, vagy már törölték.`); goHome(); } return; }
     const d = JSON.parse(JSON.stringify(snap.data()));
+    const withoutChat = ({ chat, updatedAt, ...rest }) => rest;
+    const chatOnly = !!G.doc && JSON.stringify(withoutChat(G.doc)) === JSON.stringify(withoutChat(d));
+    if (chatOnly) { G.doc = d; renderChat(); return; }
     const changedMatch = !!G.doc && G.doc.matchId !== d.matchId;
     if (changedMatch) {
       sel = null; bannerFor = null;
@@ -1314,6 +1365,82 @@ function startLocal() {
 }
 
 function goHome() { unsubGame?.(); unsubGame = null; clearTimeout(botTimer); botTimer = null; view = 'home'; G = null; sel = null; removeArmed = false; render(); }
+
+// ROOM CHAT UI START
+// Kept outside #app: incoming turns must not replace the textarea or its caret.
+const chatRoot = document.createElement('aside');
+chatRoot.className = 'room-chat'; chatRoot.hidden = true; chatRoot.setAttribute('aria-label', 'Szobachat');
+chatRoot.innerHTML = `<section class="chat-window" id="room-chat-window" aria-label="Beszélgetés a szobában" hidden>
+  <div class="chat-head"><div><strong>Szobachat</strong><small class="chat-room-label"></small></div><button type="button" class="chat-close" aria-label="Chat összecsukása">×</button></div>
+  <div class="chat-log" role="log" aria-live="polite" aria-relevant="additions" aria-label="Üzenetek"></div>
+  <form class="chat-form"><textarea aria-label="Üzenet a másik játékosnak" maxlength="500" placeholder="Írj a játékostársadnak…"></textarea><button type="submit" class="btn primary">Küldés</button><div class="chat-help"><span class="chat-status">Enter: küldés · Shift+Enter: új sor</span><span class="chat-count">0 / 500</span></div></form>
+</section><button type="button" class="chat-toggle" aria-controls="room-chat-window" aria-expanded="false"><svg class="chat-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6 4V4a1 1 0 0 1 1-1Z"/><path d="M7 8h10M7 12h7"/></svg><span>Szobachat</span><span class="chat-unread"></span></button>`;
+document.body.appendChild(chatRoot);
+const chatRooms = new Map(), chatInput = chatRoot.querySelector('textarea'), chatLog = chatRoot.querySelector('.chat-log');
+let chatRoomKey = '', chatListKey = '';
+function activeChat() {
+  if (view !== 'game' || G?.mode !== 'online' || !G.doc || mySeat() < 0) return null;
+  const key = `${G.code}:${G.doc.createdAt}:${myId}`;
+  if (!chatRooms.has(key)) chatRooms.set(key, { open: false, draft: '', sending: false, seen: store.get('chat-seen.' + key, '') });
+  return { key, state: chatRooms.get(key), doc: G.doc, code: G.code };
+}
+function markChatSeen(c) {
+  c.state.seen = RoomChat.messages(c.doc).at(-1)?.id || '';
+  store.set('chat-seen.' + c.key, c.state.seen);
+}
+function renderChat() {
+  const c = activeChat(); chatRoot.hidden = !c;
+  if (!c) return;
+  const switched = chatRoomKey !== c.key, rows = RoomChat.messages(c.doc), bottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40;
+  if (switched) { chatRoomKey = c.key; chatListKey = ''; chatInput.value = c.state.draft; }
+  const listKey = JSON.stringify(rows);
+  if (listKey !== chatListKey) {
+    chatListKey = listKey;
+    chatLog.innerHTML = rows.length ? rows.map((m) => `<article class="chat-message ${m.sender === myId ? 'own' : ''}"><div class="chat-meta"><b>${esc(m.sender === myId ? 'Te' : m.nick || 'Játékos')}</b><time>${esc(Number.isFinite(m.at) ? new Date(m.at).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }) : '')}</time></div><p>${esc(m.text)}</p></article>`).join('') : '<p class="chat-empty">Egy jó partit egy üzenet is indíthat.<br>Köszönj a játékostársadnak!</p>';
+    if (bottom || switched || rows.at(-1)?.sender === myId) chatLog.scrollTop = chatLog.scrollHeight;
+  }
+  chatRoot.querySelector('.chat-window').hidden = !c.state.open;
+  if (c.state.open && !document.hidden && (bottom || switched)) markChatSeen(c);
+  const unread = RoomChat.unread(c.doc, myId, c.state.seen), toggle = chatRoot.querySelector('.chat-toggle');
+  toggle.setAttribute('aria-expanded', String(c.state.open));
+  toggle.setAttribute('aria-label', `Szobachat${unread ? ', ' + unread + ' olvasatlan üzenet' : ''}`);
+  chatRoot.querySelector('.chat-unread').textContent = unread ? String(unread) : '';
+  chatRoot.querySelector('.chat-room-label').textContent = `${c.code} · Az utolsó ${RoomChat.LIMIT} üzenet megmarad a szobában`;
+  chatRoot.querySelector('button[type="submit"]').disabled = c.state.sending || !RoomChat.text(c.state.draft);
+  chatRoot.querySelector('.chat-count').textContent = `${chatInput.value.length} / ${RoomChat.MAX_LENGTH}`;
+  chatRoot.querySelector('.chat-status').textContent = c.state.sending ? 'Küldés…' : 'Enter: küldés · Shift+Enter: új sor';
+}
+function toggleChat(open) {
+  const c = activeChat(); if (!c) return;
+  c.state.open = open; if (open) markChatSeen(c);
+  renderChat();
+  if (open) { chatLog.scrollTop = chatLog.scrollHeight; chatInput.focus(); }
+  else chatRoot.querySelector('.chat-toggle').focus();
+}
+chatRoot.querySelector('.chat-toggle').addEventListener('click', () => { const c = activeChat(); if (c) toggleChat(!c.state.open); });
+chatRoot.querySelector('.chat-close').addEventListener('click', () => toggleChat(false));
+chatInput.addEventListener('input', () => { const c = activeChat(); if (c) { c.state.draft = chatInput.value; renderChat(); } });
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); chatRoot.querySelector('form').requestSubmit(); }
+  if (e.key === 'Escape') { e.stopPropagation(); toggleChat(false); }
+});
+chatLog.addEventListener('scroll', () => {
+  const c = activeChat(); if (c?.state.open && !document.hidden && chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40) { markChatSeen(c); renderChat(); }
+});
+document.addEventListener('visibilitychange', renderChat);
+chatRoot.querySelector('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const c = activeChat(); if (!c || c.state.sending) return;
+  const draft = c.state.draft, body = RoomChat.text(draft); if (!body || body.length > RoomChat.MAX_LENGTH) return;
+  const id = newMatchId(), at = Date.now(), actor = myId;
+  c.state.sending = true; renderChat();
+  try {
+    const ok = await commit((d) => d.createdAt === c.doc.createdAt ? RoomChat.append(d, actor, id, body, at) : null, true, c.code);
+    if (ok && c.state.draft === draft) { c.state.draft = ''; if (chatRoomKey === c.key) chatInput.value = ''; }
+    if (!ok) toast('Nem sikerült elküldeni az üzenetet. A szöveg megmaradt, próbáld újra!');
+  } finally { c.state.sending = false; renderChat(); }
+});
+// ROOM CHAT UI END
 
 // ---------- events ----------
 installTileDrag(app, {
