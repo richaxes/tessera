@@ -841,7 +841,7 @@ const Tablecloths = (() => {
   }
   function picker(choice = current, skin = 'classic') {
     choice = valid(choice);
-    return `<label class="skin-setting cloth-setting">Terítő <select id="tablecloth" aria-label="Terítő" title="Játék közben is választhatsz. Az automatikus terítő a Varázsiskola szettnél a kisorsolt ház színe.">${Object.entries(fabrics).map(([id, label]) => `<option value="${id}"${choice === id ? ' selected' : ''}>${id === 'auto' ? skin === 'wizard' ? 'Automatikus · házszín' : 'Automatikus · drapp' : label}</option>`).join('')}</select></label>`;
+    return `<label class="skin-setting cloth-setting">Terítő <select id="tablecloth" aria-label="Terítő" title="Nálad az egész asztal megjelenését állítja. Automatikus módban a Varázsiskola szettnél a saját házad színe jelenik meg.">${Object.entries(fabrics).map(([id, label]) => `<option value="${id}"${choice === id ? ' selected' : ''}>${id === 'auto' ? skin === 'wizard' ? 'Automatikus · házszín' : 'Automatikus · drapp' : label}</option>`).join('')}</select></label>`;
   }
   return { select, restore, cloth, badge, picker, house, assignment, current: () => current };
 })();
@@ -1058,16 +1058,9 @@ function render() {
 }
 
 function clothKey() { return G?.doc?.matchId || G?.matchId || 'room:' + (G?.doc?.createdAt || G?.code || 'home'); }
-function clothChoice(pi = mySeat()) { return G?.mode === 'online' ? G.seats[pi]?.cloth || 'auto' : pi === 0 ? Tablecloths.current() : 'auto'; }
-function clothFor(pi) { return Tablecloths.cloth(clothChoice(pi), TileSkins.current(), clothKey(), pi); }
-async function changeCloth(value) {
-  const code = G?.code;
-  if (G?.mode === 'online' && mySeat() >= 0) {
-    const ok = await commit((d) => { const seat = d.seats.find((s) => !s.bot && s.id === myId); if (!seat) return null; seat.cloth = value; return d; }, true, code);
-    if (!ok) { toast('Nem sikerült menteni a terítőt. Próbáld újra!'); render(); return; }
-  }
-  Tablecloths.select(value); render(); document.getElementById('tablecloth')?.focus();
-}
+function clothChoice() { return Tablecloths.current(); }
+function clothFor() { return Tablecloths.cloth(clothChoice(), TileSkins.current(), clothKey(), G?.mode === 'online' ? Math.max(0, mySeat()) : 0); }
+function changeCloth(value) { Tablecloths.select(value); render(); document.getElementById('tablecloth')?.focus?.(); }
 function header(extra = '') {
   const sound = view === 'game' ? `<button class="btn sm sound-toggle" data-act="sound" aria-pressed="${soundEnabled}" title="Hangjelzés minden saját kör elején. Az első kattintás engedélyezi a hangot.">Hang: ${soundEnabled ? 'be' : 'ki'}</button>` : '';
   return `<header class="top"><div class="mark">${tileSvg(2)}<span>Tessera</span></div><div class="grow"></div>${TileSkins.picker()}${Tablecloths.picker(G?.mode === 'online' ? clothChoice() : Tablecloths.current(), TileSkins.current())}${sound}${extra}</header>`;
@@ -1150,7 +1143,7 @@ function gameHTML() {
   if (s.players.length === 2) {
     const left = G.mode === 'online' ? f : 0, right = 1 - left;
     const playerBoard = (i) => `<div class="duel-seat ${i === f ? 'mine' : ''}" data-player="${i}">${boardHTML(i, false)}</div>`;
-    return head + statusHTML() + undoHTML() + `<div class="game duel" data-cloth="${clothFor(f)}">
+    return head + statusHTML() + undoHTML() + `<div class="game duel" data-cloth="${clothFor()}">
       ${playerBoard(left)}
       <section class="duel-centre" aria-label="Közös középmező">${marketHTML('centre')}</section>
       ${playerBoard(right)}
@@ -1161,7 +1154,7 @@ function gameHTML() {
   const others = s.players.map((_, i) => i).filter((i) => i !== f);
   return head + `
   ${statusHTML()}${undoHTML()}
-  <div class="game" data-cloth="${clothFor(f)}">
+  <div class="game" data-cloth="${clothFor()}">
     ${others.length ? `<div class="opps">${others.map((i) => boardHTML(i, true)).join('')}</div>` : ''}
     ${marketHTML()}
     <div class="mine">${boardHTML(f, false)}</div>
@@ -1233,7 +1226,7 @@ function boardHTML(pi, compact) {
   const turn = s.status === 'playing' && s.turn === pi && !G.doc?.undo;
   const mine = G.mode === 'online' ? isMe(pi) : !G.seats[pi].bot;
   const badge = turnBadge(turn, turn ? (mine ? 'Te következel' : 'Ő következik') : s.status === 'over' ? 'Játék vége' : 'Várakozik');
-  return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" data-cloth="${clothFor(pi)}" data-cloth="${clothFor(pi)}" data-cloth="${clothFor(pi)}" aria-label="${esc(seatName(pi))} táblája">
+  return `<section class="board ${compact ? 'compact' : ''} ${turn ? 'turn' : ''}" data-cloth="${clothFor()}" aria-label="${esc(seatName(pi))} táblája">
     <div class="bhead"><div class="player-label"><span class="nm">${esc(seatName(pi))}${isMe(pi) ? ' <span class="muted">(te)</span>' : ''}</span>${badge}${Tablecloths.badge(TileSkins.current(), clothKey(), pi)}</div><span class="sc num">${p.score}</span></div>
     <div class="bgrid"><div class="lines">${lines}</div><div class="wall">${wall}</div></div>
     <button class="floor ${active ? 'ok' : ''}" data-drop-player="${pi}" data-drop-line="-1" ${active ? 'data-act="place" data-line="-1"' : 'disabled tabindex="-1"'} aria-label="Padlósor">${fl}</button>
@@ -1407,7 +1400,7 @@ async function createTable() {
   try {
     for (let i = 0; i < 3 && (await db.doc('games/' + code).get()).exists; i++) code = genCode();
     const now = Date.now();
-    await db.doc('games/' + code).set({ code, status: 'lobby', hostId: myId, size: onlineSize, private: onlinePrivate, seats: [{ id: myId, nick, bot: false, cloth: Tablecloths.current() }], playerIds: [myId], createdAt: now, updatedAt: now, state: null });
+    await db.doc('games/' + code).set({ code, status: 'lobby', hostId: myId, size: onlineSize, private: onlinePrivate, seats: [{ id: myId, nick, bot: false }], playerIds: [myId], createdAt: now, updatedAt: now, state: null });
     openTable(code);
   } catch (e) {
     console.warn(e); toast(e?.code === 'permission-denied' ? 'A szerver nem engedélyezte az asztal létrehozását. Ellenőrizd a Firestore hozzáférési szabályait!' : 'Nem sikerült létrehozni az asztalt (' + (e?.code || e?.message || 'ismeretlen hiba') + ').');
@@ -1446,7 +1439,7 @@ async function sit(code) {
   const ok = await commit((d) => {
     if ((d.playerIds || []).includes(myId)) return d;
     if (d.status !== 'lobby' || d.seats.length >= d.size) return null;
-    d.seats.push({ id: myId, nick, bot: false, cloth: Tablecloths.current() }); d.playerIds = [...(d.playerIds || []), myId];
+    d.seats.push({ id: myId, nick, bot: false }); d.playerIds = [...(d.playerIds || []), myId];
     return d;
   }, false, code);
   return ok;
